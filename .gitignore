@@ -1,0 +1,52 @@
+# .gitignore para proyectos .NET 9
+# Basado en recomendaciones de Microsoft y GitHub
+
+# Archivos de compilación
+bin/
+obj/
+
+# Archivos de usuario de Visual Studio
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Archivos de configuración de VS Code
+.vscode/
+
+# Archivos de paquetes NuGet
+*.nupkg
+*.snupkg
+# Archivos de lock y cache de NuGet
+project.lock.json
+project.fragment.lock.json
+artifacts/
+*.nuget.props
+*.nuget.targets
+*.nuget.dgspec.json
+*.nuget.cache
+
+# Archivos de configuración de usuario
+*.userprefs
+*.user.config
+
+# Archivos de logs
+*.log
+
+# Archivos de test result
+TestResults/
+
+# Archivos generados por Rider
+.idea/
+*.sln.iml
+
+# Archivos de configuración de Azure
+*.azureFunctions/
+
+# Otros
+_ReSharper*/
+*.vspscc
+*.vssscc
+
+# Secretos de usuario
+secrets.json
