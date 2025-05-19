@@ -125,4 +125,36 @@ public class SqlServerMetadataProvider : IMetadataProvider
         }
         return results;
     }
+
+    public async Task<IEnumerable<ColumnInfo>> GetColumnsAsync(string tableOrView)
+    {
+        var columns = new List<ColumnInfo>();
+        string schema = "dbo";
+        string name = tableOrView;
+        if (tableOrView.Contains('.'))
+        {
+            var parts = tableOrView.Split('.', 2);
+            schema = parts[0];
+            name = parts[1];
+        }
+        using var conn = new SqlConnection(_connectionString);
+        await conn.OpenAsync();
+        using var cmd = new SqlCommand(@"SELECT COLUMN_NAME, DATA_TYPE, IS_NULLABLE, CHARACTER_MAXIMUM_LENGTH
+            FROM INFORMATION_SCHEMA.COLUMNS
+            WHERE TABLE_SCHEMA = @schema AND TABLE_NAME = @name", conn);
+        cmd.Parameters.AddWithValue("@schema", schema);
+        cmd.Parameters.AddWithValue("@name", name);
+        using var reader = await cmd.ExecuteReaderAsync();
+        while (await reader.ReadAsync())
+        {
+            columns.Add(new ColumnInfo
+            {
+                Name = reader.GetString(0),
+                DataType = reader.GetString(1),
+                IsNullable = reader.GetString(2) == "YES",
+                MaxLength = await reader.IsDBNullAsync(3) ? null : reader.GetInt32(3)
+            });
+        }
+        return columns;
+    }
 }
