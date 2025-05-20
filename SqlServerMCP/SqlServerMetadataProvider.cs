@@ -1,22 +1,24 @@
 using Microsoft.Data.SqlClient;
+using System.Data.Common;
 
 namespace SqlServerMCP;
 
 public class SqlServerMetadataProvider : IMetadataProvider
 {
-    private readonly string _connectionString;
+    private readonly Func<DbConnection> _connectionFactory;
 
-    public SqlServerMetadataProvider(string connectionString)
+    public SqlServerMetadataProvider(Func<DbConnection> connectionFactory)
     {
-        _connectionString = connectionString;
+        _connectionFactory = connectionFactory;
     }
 
     public async Task<IEnumerable<string>> GetTablesAsync()
     {
         var tables = new List<string>();
-        using var conn = new SqlConnection(_connectionString);
+        using var conn = _connectionFactory();
         await conn.OpenAsync();
-        using var cmd = new SqlCommand("SELECT TABLE_SCHEMA + '.' + TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE'", conn);
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = "SELECT TABLE_SCHEMA + '.' + TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE'";
         using var reader = await cmd.ExecuteReaderAsync();
         while (await reader.ReadAsync())
             tables.Add(reader.GetString(0));
@@ -26,9 +28,10 @@ public class SqlServerMetadataProvider : IMetadataProvider
     public async Task<IEnumerable<string>> GetViewsAsync()
     {
         var views = new List<string>();
-        using var conn = new SqlConnection(_connectionString);
+        using var conn = _connectionFactory();
         await conn.OpenAsync();
-        using var cmd = new SqlCommand("SELECT TABLE_SCHEMA + '.' + TABLE_NAME FROM INFORMATION_SCHEMA.VIEWS", conn);
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = "SELECT TABLE_SCHEMA + '.' + TABLE_NAME FROM INFORMATION_SCHEMA.VIEWS";
         using var reader = await cmd.ExecuteReaderAsync();
         while (await reader.ReadAsync())
             views.Add(reader.GetString(0));
@@ -38,9 +41,10 @@ public class SqlServerMetadataProvider : IMetadataProvider
     public async Task<IEnumerable<string>> GetStoredProceduresAsync()
     {
         var procs = new List<string>();
-        using var conn = new SqlConnection(_connectionString);
+        using var conn = _connectionFactory();
         await conn.OpenAsync();
-        using var cmd = new SqlCommand("SELECT SPECIFIC_SCHEMA + '.' + SPECIFIC_NAME FROM INFORMATION_SCHEMA.ROUTINES WHERE ROUTINE_TYPE = 'PROCEDURE'", conn);
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = "SELECT SPECIFIC_SCHEMA + '.' + SPECIFIC_NAME FROM INFORMATION_SCHEMA.ROUTINES WHERE ROUTINE_TYPE = 'PROCEDURE'";
         using var reader = await cmd.ExecuteReaderAsync();
         while (await reader.ReadAsync())
             procs.Add(reader.GetString(0));
@@ -50,9 +54,10 @@ public class SqlServerMetadataProvider : IMetadataProvider
     public async Task<IEnumerable<ForeignKeyInfo>> GetForeignKeysAsync()
     {
         var fks = new List<ForeignKeyInfo>();
-        using var conn = new SqlConnection(_connectionString);
+        using var conn = _connectionFactory();
         await conn.OpenAsync();
-        using var cmd = new SqlCommand(@"SELECT 
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = @"SELECT 
             fk.name AS ForeignKey,
             tp.name AS TableName,
             cp.name AS ColumnName,
@@ -63,7 +68,7 @@ public class SqlServerMetadataProvider : IMetadataProvider
         INNER JOIN sys.tables tp ON fkc.parent_object_id = tp.object_id
         INNER JOIN sys.columns cp ON fkc.parent_object_id = cp.object_id AND fkc.parent_column_id = cp.column_id
         INNER JOIN sys.tables tr ON fkc.referenced_object_id = tr.object_id
-        INNER JOIN sys.columns cr ON fkc.referenced_object_id = cr.object_id AND fkc.referenced_column_id = cr.column_id", conn);
+        INNER JOIN sys.columns cr ON fkc.referenced_object_id = cr.object_id AND fkc.referenced_column_id = cr.column_id";
         using var reader = await cmd.ExecuteReaderAsync();
         while (await reader.ReadAsync())
         {
@@ -82,9 +87,10 @@ public class SqlServerMetadataProvider : IMetadataProvider
     public async Task<List<Dictionary<string, object?>>> ExecuteQueryAsync(string query)
     {
         var results = new List<Dictionary<string, object?>>();
-        using var conn = new SqlConnection(_connectionString);
+        using var conn = _connectionFactory();
         await conn.OpenAsync();
-        using var cmd = new SqlCommand(query, conn);
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = query;
         using var reader = await cmd.ExecuteReaderAsync();
         while (await reader.ReadAsync())
         {
@@ -102,14 +108,19 @@ public class SqlServerMetadataProvider : IMetadataProvider
     public async Task<List<Dictionary<string, object?>>> ExecuteStoredProcedureAsync(string procedureName, Dictionary<string, object>? parameters)
     {
         var results = new List<Dictionary<string, object?>>();
-        using var conn = new SqlConnection(_connectionString);
+        using var conn = _connectionFactory();
         await conn.OpenAsync();
-        using var cmd = new SqlCommand(procedureName, conn) { CommandType = System.Data.CommandType.StoredProcedure };
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = procedureName;
+        cmd.CommandType = System.Data.CommandType.StoredProcedure;
         if (parameters != null)
         {
             foreach (var kv in parameters)
             {
-                cmd.Parameters.AddWithValue(kv.Key, kv.Value ?? DBNull.Value);
+                var p = cmd.CreateParameter();
+                p.ParameterName = kv.Key;
+                p.Value = kv.Value ?? DBNull.Value;
+                cmd.Parameters.Add(p);
             }
         }
         using var reader = await cmd.ExecuteReaderAsync();
@@ -137,13 +148,20 @@ public class SqlServerMetadataProvider : IMetadataProvider
             schema = parts[0];
             name = parts[1];
         }
-        using var conn = new SqlConnection(_connectionString);
+        using var conn = _connectionFactory();
         await conn.OpenAsync();
-        using var cmd = new SqlCommand(@"SELECT COLUMN_NAME, DATA_TYPE, IS_NULLABLE, CHARACTER_MAXIMUM_LENGTH
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = @"SELECT COLUMN_NAME, DATA_TYPE, IS_NULLABLE, CHARACTER_MAXIMUM_LENGTH
             FROM INFORMATION_SCHEMA.COLUMNS
-            WHERE TABLE_SCHEMA = @schema AND TABLE_NAME = @name", conn);
-        cmd.Parameters.AddWithValue("@schema", schema);
-        cmd.Parameters.AddWithValue("@name", name);
+            WHERE TABLE_SCHEMA = @schema AND TABLE_NAME = @name";
+        var p1 = cmd.CreateParameter();
+        p1.ParameterName = "@schema";
+        p1.Value = schema;
+        cmd.Parameters.Add(p1);
+        var p2 = cmd.CreateParameter();
+        p2.ParameterName = "@name";
+        p2.Value = name;
+        cmd.Parameters.Add(p2);
         using var reader = await cmd.ExecuteReaderAsync();
         while (await reader.ReadAsync())
         {

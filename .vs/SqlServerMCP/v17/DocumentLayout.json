@@ -3,6 +3,10 @@
   "WorkspaceRootPath": "C:\\Proyectos\\SqlServerMCP\\",
   "Documents": [
     {
+      "AbsoluteMoniker": "D:0:0:{FD697E52-1015-7FA8-44D6-1BE453D038AD}|SqlServerMCP.Tests\\SqlServerMCP.Tests.csproj|c:\\proyectos\\sqlservermcp\\sqlservermcp.tests\\sqlservermetadataprovidertests.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{FD697E52-1015-7FA8-44D6-1BE453D038AD}|SqlServerMCP.Tests\\SqlServerMCP.Tests.csproj|solutionrelative:sqlservermcp.tests\\sqlservermetadataprovidertests.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
       "AbsoluteMoniker": "D:0:0:{FD697E52-1015-7FA8-44D6-1BE453D038AD}|SqlServerMCP.Tests\\SqlServerMCP.Tests.csproj|c:\\proyectos\\sqlservermcp\\sqlservermcp.tests\\programtests.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{FD697E52-1015-7FA8-44D6-1BE453D038AD}|SqlServerMCP.Tests\\SqlServerMCP.Tests.csproj|solutionrelative:sqlservermcp.tests\\programtests.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     }
@@ -19,6 +23,19 @@
             {
               "$type": "Document",
               "DocumentIndex": 0,
+              "Title": "SqlServerMetadataProviderTests.cs",
+              "DocumentMoniker": "C:\\Proyectos\\SqlServerMCP\\SqlServerMCP.Tests\\SqlServerMetadataProviderTests.cs",
+              "RelativeDocumentMoniker": "SqlServerMCP.Tests\\SqlServerMetadataProviderTests.cs",
+              "ToolTip": "C:\\Proyectos\\SqlServerMCP\\SqlServerMCP.Tests\\SqlServerMetadataProviderTests.cs",
+              "RelativeToolTip": "SqlServerMCP.Tests\\SqlServerMetadataProviderTests.cs",
+              "ViewState": "AgIAAGkBAAAAAAAAAAAcwGYBAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-05-20T13:19:21.733Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
               "Title": "ProgramTests.cs",
               "DocumentMoniker": "C:\\Proyectos\\SqlServerMCP\\SqlServerMCP.Tests\\ProgramTests.cs",
               "RelativeDocumentMoniker": "SqlServerMCP.Tests\\ProgramTests.cs",

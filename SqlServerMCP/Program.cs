@@ -25,7 +25,7 @@ public class Program
         if (mode == "sse")
         {
             var builder = Microsoft.AspNetCore.Builder.WebApplication.CreateBuilder(args);
-            builder.Services.AddSingleton<IMetadataProvider>(_ => new SqlServerMetadataProvider(connectionString));
+            builder.Services.AddSingleton<IMetadataProvider>(_ => new SqlServerMetadataProvider(() => new Microsoft.Data.SqlClient.SqlConnection(connectionString)));
             builder.Services.AddMcpServer()
                 .WithHttpTransport()
                 .WithToolsFromAssembly();
@@ -36,7 +36,7 @@ public class Program
         else // stdio por defecto
         {
             var builder = Host.CreateApplicationBuilder(args);
-            builder.Services.AddSingleton<IMetadataProvider>(_ => new SqlServerMetadataProvider(connectionString));
+            builder.Services.AddSingleton<IMetadataProvider>(_ => new SqlServerMetadataProvider(() => new Microsoft.Data.SqlClient.SqlConnection(connectionString)));
             builder.Services.AddMcpServer()
                 .WithStdioServerTransport()
                 .WithToolsFromAssembly();
