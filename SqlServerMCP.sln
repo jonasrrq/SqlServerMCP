@@ -4,6 +4,8 @@ VisualStudioVersion = 17.5.2.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SqlServerMCP", "SqlServerMCP\SqlServerMCP.csproj", "{FA88FEC5-D8FE-848D-33C2-AB2CECC66D10}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SqlServerMCP.Tests", "SqlServerMCP.Tests\SqlServerMCP.Tests.csproj", "{FD697E52-1015-7FA8-44D6-1BE453D038AD}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -14,6 +16,10 @@ Global
 		{FA88FEC5-D8FE-848D-33C2-AB2CECC66D10}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{FA88FEC5-D8FE-848D-33C2-AB2CECC66D10}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{FA88FEC5-D8FE-848D-33C2-AB2CECC66D10}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FD697E52-1015-7FA8-44D6-1BE453D038AD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FD697E52-1015-7FA8-44D6-1BE453D038AD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FD697E52-1015-7FA8-44D6-1BE453D038AD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FD697E52-1015-7FA8-44D6-1BE453D038AD}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
