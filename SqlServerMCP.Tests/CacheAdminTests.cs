@@ -1,4 +1,5 @@
 using FluentAssertions;
+#pragma warning disable CS8765
 using SqlServerMCP;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -53,9 +54,9 @@ namespace SqlServerMCP.Tests
         public override System.Data.CommandType CommandType { get; set; }
         public override bool DesignTimeVisible { get; set; }
         public override System.Data.UpdateRowSource UpdatedRowSource { get; set; }
-        protected override System.Data.Common.DbConnection DbConnection { get; set; }
+        protected override System.Data.Common.DbConnection? DbConnection { get; set; } = null!;
         protected override System.Data.Common.DbParameterCollection DbParameterCollection { get; } = new SqlServerMCP.Tests.SqlParameterCollectionMock();
-        protected override System.Data.Common.DbTransaction DbTransaction { get; set; }
+        protected override System.Data.Common.DbTransaction? DbTransaction { get; set; } = null!;
         public override void Cancel() { }
         public override int ExecuteNonQuery() => 0;
         public override object ExecuteScalar() => 0;

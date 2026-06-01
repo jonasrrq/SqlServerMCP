@@ -74,9 +74,12 @@ public class Program
         if (isHttpMode)
         {
             var builder = Microsoft.AspNetCore.Builder.WebApplication.CreateBuilder(args);
+            var httpAuthOptions = HttpAuthOptions.FromEnvironment();
+            httpAuthOptions.Validate();
 
             // Register audit logger
             builder.Services.AddSingleton<IAuditLogger>(_ => new InMemoryAuditLogger(ParseInt(Environment.GetEnvironmentVariable("MCP_AUDIT_MAX_ENTRIES"), 1000)));
+            builder.Services.AddSingleton(httpAuthOptions);
 
             var defaultMaxRows = ParseInt(Environment.GetEnvironmentVariable("MCP_QUERY_MAX_ROWS"), 1000);
             var defaultTimeout = ParseInt(Environment.GetEnvironmentVariable("MCP_QUERY_TIMEOUT_SECONDS"), 30);
@@ -102,10 +105,25 @@ public class Program
                     }
                 })
                 .WithToolsFromAssembly();
+            var hostGuardOptions = HttpHostGuardOptions.FromEnvironment();
+            // validate early to fail fast when enabled but misconfigured
+            hostGuardOptions.Validate();
+            builder.Services.AddSingleton(hostGuardOptions);
 
             var app = builder.Build();
             // expose service provider for static access to best-effort loggers
             ServiceProviderAccessor.Current = app.Services;
+
+            if (httpAuthOptions.Enabled)
+            {
+                app.UseMiddleware<HttpAuthMiddleware>();
+            }
+
+            if (hostGuardOptions.Enabled)
+            {
+                app.UseMiddleware<HttpHostGuardMiddleware>();
+            }
+
             app.MapMcp();
             await app.RunAsync(Environment.GetEnvironmentVariable("MCP_HTTP_URL") ?? "http://localhost:5000");
         }

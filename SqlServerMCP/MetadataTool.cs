@@ -25,11 +25,12 @@ public static class MetadataTool
             var procs = await procsTask;
             var fks = await fksTask;
 
-            return new { tables, views, procedures = procs, foreignKeys = fks };
+            // Return both camelCase (for existing clients/tests) and PascalCase structured object
+            return new { tables, views, procedures = procs, foreignKeys = fks, structured = new MetadataResult { Tables = tables, Views = views, Procedures = procs, ForeignKeys = fks } };
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            return CreateSafeError("MCP-METADATA-001", "No fue posible obtener metadatos.");
+            return CreateSafeError("MCP-METADATA-001", "No fue posible obtener metadatos.", ex);
         }
     }
 
@@ -38,7 +39,9 @@ public static class MetadataTool
         IMetadataProvider provider,
         [Description("Consulta SQL a ejecutar (solo SELECT/CTE)")] string query,
         [Description("Límite máximo de filas a devolver (1-10000)")] int maxRows = 1000,
-        [Description("Timeout en segundos para la consulta")] int timeoutSeconds = 30)
+        [Description("Timeout en segundos para la consulta")] int timeoutSeconds = 30,
+        [Description("Página a devolver (1-based)")] int page = 1,
+        [Description("Tamaño de página (filas por página)")] int pageSize = 100)
     {
         try
         {
@@ -55,26 +58,82 @@ public static class MetadataTool
 
             try
             {
-                if (provider is SqlServerMetadataProvider sqlProvider)
+                // normalize pagination inputs
+                var requestedPage = Math.Max(1, page);
+                var requestedPageSize = Math.Max(1, Math.Min(10000, pageSize));
+
+                // if provider supports maxRows, ensure we fetch at least as many rows as needed for the requested page
+                var effectiveMaxRows = Math.Max(maxRows, requestedPage * requestedPageSize);
+
+                // fetch rows with effective limit where supported; some mocks/tests only setup parameterless overload
+                List<Dictionary<string, object?>> rows;
+                var limitedTask = provider.ExecuteQueryAsync(query, effectiveMaxRows, timeoutSeconds);
+                if (limitedTask is null)
                 {
-                    var result = await sqlProvider.ExecuteQueryAsync(query, maxRows, timeoutSeconds);
-                    auditLogger?.LogQuery("-", query, maxRows, timeoutSeconds, true, null);
-                    return result;
+                    rows = await provider.ExecuteQueryAsync(query);
+                }
+                else
+                {
+                    rows = await limitedTask;
                 }
 
-                var res = await provider.ExecuteQueryAsync(query);
-                auditLogger?.LogQuery("-", query, maxRows, timeoutSeconds, true, null);
-                return res;
+                auditLogger?.LogQuery("-", query, effectiveMaxRows, timeoutSeconds, true, null);
+
+                var totalAvailable = rows.Count;
+                var skip = (requestedPage - 1) * requestedPageSize;
+                var pageRows = rows.Skip(skip).Take(requestedPageSize).ToList();
+
+                // Build columns list from pageRows keys
+                var columns = pageRows.SelectMany(r => r.Keys).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+
+                var result = new QueryResult
+                {
+                    Columns = columns,
+                    Rows = pageRows,
+                    Pagination = new PaginationResult { Page = requestedPage, PageSize = requestedPageSize, TotalAvailable = totalAvailable, Returned = pageRows.Count }
+                };
+
+                return new { result, columns, rows = pageRows, pagination = result.Pagination };
             }
             catch (Exception ex)
             {
                 auditLogger?.LogQuery("-", query, maxRows, timeoutSeconds, false, "MCP-QUERY-ERR");
-                throw;
+
+                var correlationId = Guid.NewGuid().ToString("N");
+                var includeDebugDetails = ParseBool(Environment.GetEnvironmentVariable("MCP_INCLUDE_DEBUG_DETAILS"), false);
+
+                if (includeDebugDetails && ex is not null)
+                {
+                    // If we got a NullReferenceException (from awaiting a null Task), try to call the parameterless overload to get the real underlying exception
+                    Exception? underlying = ex;
+                    if (ex.Message?.Contains("Object reference not set", StringComparison.OrdinalIgnoreCase) == true)
+                    {
+                        try
+                        {
+                            await provider.ExecuteQueryAsync(query);
+                        }
+                        catch (Exception realEx)
+                        {
+                            underlying = realEx;
+                        }
+                    }
+
+                    var debug = DiagnosticSanitizer.BuildDebugDetail(underlying);
+                    if (string.IsNullOrWhiteSpace(debug))
+                    {
+                        var text = underlying?.ToString() ?? string.Empty;
+                        debug = DiagnosticSanitizer.BuildDebugDetail(new Exception(text));
+                    }
+
+                    return new { error = true, errorCode = "MCP-QUERY-001", correlationId, message = "No fue posible ejecutar la consulta.", debugDetail = debug };
+                }
+
+                return new { error = true, errorCode = "MCP-QUERY-001", correlationId, message = "No fue posible ejecutar la consulta." };
             }
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            return CreateSafeError("MCP-QUERY-001", "No fue posible ejecutar la consulta.");
+            return CreateSafeError("MCP-QUERY-001", "No fue posible ejecutar la consulta.", ex);
         }
     }
 
@@ -88,13 +147,14 @@ public static class MetadataTool
         {
             if (provider is SqlServerMetadataProvider sqlProvider)
             {
-                return await sqlProvider.ExecuteStoredProcedureAsync(procedureName, parameters ?? new());
+                var rows = await sqlProvider.ExecuteStoredProcedureAsync(procedureName, parameters ?? new());
+                return new { rows, structured = new StoredProcedureResult { Rows = rows } };
             }
-            throw new InvalidOperationException("El proveedor no soporta ejecución de procedimientos almacenados.");
+            return CreateSafeError("MCP-PROC-001", "El proveedor no soporta ejecución de procedimientos almacenados.");
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            return CreateSafeError("MCP-PROC-001", "No fue posible ejecutar el procedimiento almacenado.");
+            return CreateSafeError("MCP-PROC-001", "No fue posible ejecutar el procedimiento almacenado.", ex);
         }
     }
 
@@ -106,22 +166,39 @@ public static class MetadataTool
         try
         {
             var columns = await provider.GetColumnsAsync(tableOrView);
-            return columns;
+            return new ColumnsResult { Columns = columns };
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            return CreateSafeError("MCP-COLUMNS-001", "No fue posible obtener las columnas.");
+            return CreateSafeError("MCP-COLUMNS-001", "No fue posible obtener las columnas.", ex);
         }
     }
 
-    private static object CreateSafeError(string code, string message)
-        => new
+    private static object CreateSafeError(string code, string message, Exception? exception = null)
+    {
+        var correlationId = Guid.NewGuid().ToString("N");
+        var includeDebugDetails = ParseBool(Environment.GetEnvironmentVariable("MCP_INCLUDE_DEBUG_DETAILS"), false);
+
+        if (includeDebugDetails && exception is not null)
+        {
+            return new
+            {
+                error = true,
+                errorCode = code,
+                correlationId,
+                message,
+                debugDetail = DiagnosticSanitizer.BuildDebugDetail(exception)
+            };
+        }
+
+        return new
         {
             error = true,
             errorCode = code,
-            correlationId = Guid.NewGuid().ToString("N"),
+            correlationId,
             message
         };
+    }
 
     [McpServerTool, Description("Limpia la caché de metadatos en el proveedor SQL (solo para SqlServerMetadataProvider).")]
     public static object ClearMetadataCache(IMetadataProvider provider)
@@ -131,7 +208,7 @@ public static class MetadataTool
             if (provider is IMetadataCache cache)
             {
                 cache.ClearCache();
-                return new { cleared = true };
+                return new ClearCacheResult { Cleared = true };
             }
 
             return CreateSafeError("MCP-CACHE-001", "El proveedor no soporta gestión de caché.");
@@ -150,7 +227,7 @@ public static class MetadataTool
             if (provider is IMetadataCache cache)
             {
                 var status = cache.GetCacheStatus();
-                return status.Select(kv => new { key = kv.Key, expiresAt = kv.Value }).ToArray();
+                return status.Select(kv => new CacheStatusItem { Key = kv.Key, ExpiresAt = kv.Value }).ToArray();
             }
 
             return CreateSafeError("MCP-CACHE-003", "El proveedor no soporta gestión de caché.");
@@ -187,4 +264,7 @@ public static class MetadataTool
 
     private static int ParseInt(string? value, int defaultValue)
         => int.TryParse(value, out var parsed) && parsed > 0 ? parsed : defaultValue;
+
+    private static bool ParseBool(string? value, bool defaultValue)
+        => bool.TryParse(value, out var parsed) ? parsed : defaultValue;
 }

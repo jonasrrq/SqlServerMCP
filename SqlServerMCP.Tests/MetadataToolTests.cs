@@ -161,5 +161,37 @@ namespace SqlServerMCP.Tests
             result.Should().NotBeNull();
             result.ToString().Should().Contain("error");
         }
+
+        [Fact]
+        public async Task ExecuteQuery_WithDebugFlag_ReturnsSanitizedDebugDetail()
+        {
+            // Arrange
+            var oldValue = Environment.GetEnvironmentVariable("MCP_INCLUDE_DEBUG_DETAILS");
+            Environment.SetEnvironmentVariable("MCP_INCLUDE_DEBUG_DETAILS", "true");
+
+            var mock = new Mock<IMetadataProvider>();
+            mock.Setup(x => x.ExecuteQueryAsync(It.IsAny<string>()))
+                .ThrowsAsync(new System.Exception("Password=supersecret; User ID=sa; TLS handshake failed"));
+
+            try
+            {
+                // Act
+                var result = await MetadataTool.ExecuteQuery(mock.Object, "SELECT 1");
+
+                // Assert
+                result.Should().NotBeNull();
+                var debugDetailProperty = result.GetType().GetProperty("debugDetail");
+                debugDetailProperty.Should().NotBeNull();
+                var debugDetail = debugDetailProperty!.GetValue(result)?.ToString();
+                debugDetail.Should().NotBeNullOrWhiteSpace();
+                debugDetail.Should().NotContain("supersecret");
+                debugDetail.Should().Contain("Password=***");
+                debugDetail.Should().Contain("User ID=***");
+            }
+            finally
+            {
+                Environment.SetEnvironmentVariable("MCP_INCLUDE_DEBUG_DETAILS", oldValue);
+            }
+        }
     }
 }

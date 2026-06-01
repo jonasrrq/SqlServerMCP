@@ -31,7 +31,7 @@ namespace SqlServerMCP.Tests
             var entries = audit.GetEntries();
             entries.Should().NotBeNullOrEmpty();
             entries[0].Tool.Should().Be("ExecuteQuery");
-            ((string)entries[0].Parameters["query"]).Should().Contain("SELECT 1");
+            entries[0].Parameters["query"]!.ToString().Should().Contain("SELECT 1");
         }
     }
 }

@@ -1,4 +1,5 @@
 using FluentAssertions;
+#pragma warning disable CS8765
 using SqlServerMCP;
 using System.Collections;
 using System.Data;
@@ -119,17 +120,17 @@ public class SqlServerMetadataProviderCacheTests
     {
         public override int Count => 0;
         public override object SyncRoot => this;
-        public override int Add(object? value) => 0;
+        public override int Add(object value) => 0;
         public override void AddRange(Array values) { }
         public override void Clear() { }
         public override bool Contains(string value) => false;
-        public override bool Contains(object? value) => false;
+        public override bool Contains(object value) => false;
         public override void CopyTo(Array array, int index) { }
         public override IEnumerator GetEnumerator() => Array.Empty<object>().GetEnumerator();
         public override int IndexOf(string parameterName) => -1;
-        public override int IndexOf(object? value) => -1;
+        public override int IndexOf(object value) => -1;
         public override void Insert(int index, object value) { }
-        public override void Remove(object? value) { }
+        public override void Remove(object value) { }
         public override void RemoveAt(string parameterName) { }
         public override void RemoveAt(int index) { }
         protected override DbParameter GetParameter(string parameterName) => throw new NotImplementedException();
