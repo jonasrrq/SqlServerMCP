@@ -1,9 +1,10 @@
-﻿using Microsoft.Extensions.Hosting;
+﻿
 using Microsoft.Extensions.DependencyInjection;
 using ModelContextProtocol.Server;
 using System.ComponentModel;
 using Microsoft.AspNetCore.Builder; // Necesario para WebApplication
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Hosting;
 
 namespace SqlServerMCP;
 
@@ -27,7 +28,14 @@ public class Program
             var builder = Microsoft.AspNetCore.Builder.WebApplication.CreateBuilder(args);
             builder.Services.AddSingleton<IMetadataProvider>(_ => new SqlServerMetadataProvider(() => new Microsoft.Data.SqlClient.SqlConnection(connectionString)));
             builder.Services.AddMcpServer()
-                .WithHttpTransport()
+                .WithHttpTransport(options =>
+                {
+                    // Soporta clientes modernos (Streamable HTTP) y clientes legacy SSE (MCP Inspector en modo SSE).
+                    options.Stateless = false;
+#pragma warning disable MCP9004
+                    options.EnableLegacySse = true;
+#pragma warning restore MCP9004
+                })
                 .WithToolsFromAssembly();
             var app = builder.Build();
             app.MapMcp();

@@ -1,52 +1,153 @@
-# .gitignore para proyectos .NET 9
+# .gitignore for .NET projects 9
 # Basado en recomendaciones de Microsoft y GitHub
 
-# Archivos de compilación
+## === COMPILACIÓN Y BUILD ===
 bin/
 obj/
+*.dll
+*.exe
+*.so
+*.dylib
+*.pdb
+*.nativeimage
 
-# Archivos de usuario de Visual Studio
+## === VISUAL STUDIO ===
+# Archivos de usuario
 *.user
 *.suo
 *.userosscache
 *.sln.docstates
+.vs/
 
-# Archivos de configuración de VS Code
+# Cache y temporales
+.vs/
 .vscode/
+*.user.config
+.VisualStudio/
 
-# Archivos de paquetes NuGet
+# Archivos de solución
+*.sln.bak
+*.csproj.bak
+
+## === NUGET ===
+# Paquetes
 *.nupkg
 *.snupkg
-# Archivos de lock y cache de NuGet
+.nuget/
+
+# Cache de NuGet
 project.lock.json
 project.fragment.lock.json
 artifacts/
-*.nuget.props
-*.nuget.targets
-*.nuget.dgspec.json
-*.nuget.cache
+.nuget.props
+.nuget.targets
+.nuget.dgspec.json
+.nuget.cache
+.nuget.g.props
+.nuget.g.targets
 
-# Archivos de configuración de usuario
-*.userprefs
-*.user.config
-
-# Archivos de logs
-*.log
-
-# Archivos de test result
-TestResults/
-
-# Archivos generados por Rider
+## === IDE Y EDITORES ===
+# Rider
 .idea/
 *.sln.iml
+*.DotSettings.user
+.idea_modules/
 
-# Archivos de configuración de Azure
-*.azureFunctions/
+# VS Code (opcional, descomenta si no quieres ignorarlo)
+# .vscode/
 
-# Otros
-_ReSharper*/
-*.vspscc
-*.vssscc
+# Sublime Text
+*.sublime-workspace
+*.sublime-project
 
-# Secretos de usuario
+# Vim
+*.swp
+*.swo
+*~
+
+## === TESTING ===
+# Test Results
+TestResults/
+coverage/
+*.trx
+.coverage
+OpenCover/
+
+## === LOGS Y TEMPORALES ===
+*.log
+*.log.*
+logs/
+tmp/
+temp/
+*.tmp
+
+## === CONFIGURACIÓN LOCAL ===
+# Configuración de usuario y secretos
 secrets.json
+appsettings.Development.json
+appsettings.local.json
+local.settings.json
+*.user.config
+*.user.props
+
+## === ANÁLISIS Y PROFILING ===
+# ReSharper
+_ReSharper*/
+.ReSharper.user
+*.resharper
+*.resharper.user
+.resharper/
+
+# Coverlet
+.coverletdata/
+
+# Profiling
+*.etl
+*.vsp
+*.vspx
+
+## === DEPLOY Y PACKAGE ===
+PublishProfiles/
+publish/
+dist/
+release/
+
+## === SISTEMA OPERATIVO ===
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Linux
+.directory
+
+## === OTROS ===
+# Archivos backup
+*.bak
+*.backup
+*.orig
+
+# Archivos temporales
+*.tmp
+*.temp
+~*
+
+# Visual Studio Code debug
+.debug/
+
+# .NET Core
+*.runtimeconfig.json
+
+# Local environment variables
+.env
+.env.local
+.env.*.local
+
+# Docker
+.dockerignore
+docker-compose.override.yml
