@@ -1,4 +1,4 @@
--# MCP Server on .NET 9 for SQL Server
+# MCP Server on .NET 10 for SQL Server
 
 Servidor MCP en C# que expone herramientas para consultar metadatos y ejecutar consultas en SQL Server.
 
