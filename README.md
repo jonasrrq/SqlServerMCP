@@ -48,34 +48,37 @@ dotnet test SqlServerMCP.sln -c Debug --no-build
 
 ## Ejecución
 
+> Seguridad: este proyecto **ya no lee `--password`** desde argumentos CLI para evitar exposición en historial de shell/procesos.
+> Define `SQLSERVER_PASSWORD` (o `SQLSERVER_CONNECTION_STRING`) por variables de entorno/secret manager.
+
 ### 1) Modo `stdio`
 
 ```bash
+set SQLSERVER_PASSWORD=tu_clave
 dotnet run --project ./SqlServerMCP/SqlServerMCP.csproj -- \
   --mode stdio \
   --server localhost \
   --database Northwind \
-  --user sa \
-  --password "tu_clave"
+  --user sa
 ```
 
 ### 2) Modo HTTP (Streamable HTTP)
 
 ```bash
+set SQLSERVER_PASSWORD=tu_clave
 dotnet run --project ./SqlServerMCP/SqlServerMCP.csproj -- \
-  --mode sse \
+  --mode http \
   --server localhost \
   --database Northwind \
-  --user sa \
-  --password "tu_clave"
+  --user sa
 ```
 
 El servidor arranca en `http://localhost:5000`.
 
 > Nota importante (MCP SDK 1.3):
 >
-> El transporte recomendado es **Streamable HTTP** (`app.MapMcp()`, URL base `http://localhost:5000`).
-> Para compatibilidad con clientes antiguos, este proyecto también habilita SSE legado (`/sse` + `/message`).
+> El transporte recomendado es **Streamable HTTP** (`app.MapMcp()`, URL base `http://localhost:5000`) y se ejecuta en modo **stateless** por defecto.
+> SSE legado (`/sse` + `/message`) queda deshabilitado por defecto y se habilita solo con `MCP_ENABLE_LEGACY_SSE=true`.
 
 ## MCP Inspector (evitar error 400)
 
@@ -143,3 +146,4 @@ Desde `MetadataTool`:
 - Evita credenciales hardcodeadas en ambientes reales.
 - Usa secretos del entorno (variables de entorno/gestor de secretos).
 - Limita permisos del usuario SQL a lo estrictamente necesario.
+- En producción, usa `SQLSERVER_ENCRYPT=Strict` y `SQLSERVER_TRUST_SERVER_CERTIFICATE=false`.

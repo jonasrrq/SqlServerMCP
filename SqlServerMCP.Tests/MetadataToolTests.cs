@@ -82,6 +82,21 @@ namespace SqlServerMCP.Tests
         }
 
         [Fact]
+        public async Task ExecuteQuery_DangerousSql_ReturnsError()
+        {
+            // Arrange
+            var mock = new Mock<IMetadataProvider>();
+
+            // Act
+            var result = await MetadataTool.ExecuteQuery(mock.Object, "DROP TABLE dbo.Test");
+
+            // Assert
+            result.Should().NotBeNull();
+            result.ToString().Should().Contain("error");
+            result.ToString().Should().Contain("MCP-QUERY-001");
+        }
+
+        [Fact]
         public async Task ExecuteStoredProcedure_ReturnsRows_WithMock()
         {
             // Arrange

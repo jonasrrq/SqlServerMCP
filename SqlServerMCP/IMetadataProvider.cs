@@ -7,8 +7,15 @@ public interface IMetadataProvider
     Task<IEnumerable<string>> GetStoredProceduresAsync();
     Task<IEnumerable<ForeignKeyInfo>> GetForeignKeysAsync();
     Task<List<Dictionary<string, object?>>> ExecuteQueryAsync(string query);
+    Task<List<Dictionary<string, object?>>> ExecuteQueryAsync(string query, int maxRows, int timeoutSeconds, CancellationToken cancellationToken = default);
     Task<List<Dictionary<string, object?>>> ExecuteStoredProcedureAsync(string procedureName, Dictionary<string, object>? parameters);
     Task<IEnumerable<ColumnInfo>> GetColumnsAsync(string tableOrView);
+}
+
+public interface IMetadataCache
+{
+    void ClearCache();
+    Dictionary<string, DateTimeOffset> GetCacheStatus();
 }
 
 public class ForeignKeyInfo

@@ -3,33 +3,70 @@ using System.Data.Common;
 
 namespace SqlServerMCP;
 
-public class SqlServerMetadataProvider : IMetadataProvider
+public class SqlServerMetadataProvider : IMetadataProvider, IMetadataCache
 {
     private readonly Func<DbConnection> _connectionFactory;
+    private readonly int _defaultTimeoutSeconds;
+    private readonly int _defaultMaxRows;
+    private readonly TimeSpan _metadataCacheTtl;
+    private readonly Dictionary<string, CacheEntry> _metadataCache = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Lock _cacheLock = new();
 
-    public SqlServerMetadataProvider(Func<DbConnection> connectionFactory)
+    public SqlServerMetadataProvider(
+        Func<DbConnection> connectionFactory,
+        int defaultTimeoutSeconds = 30,
+        int defaultMaxRows = 1000,
+        int metadataCacheTtlSeconds = 60)
     {
         _connectionFactory = connectionFactory;
+        _defaultTimeoutSeconds = defaultTimeoutSeconds > 0 ? defaultTimeoutSeconds : 30;
+        _defaultMaxRows = defaultMaxRows > 0 ? defaultMaxRows : 1000;
+        _metadataCacheTtl = TimeSpan.FromSeconds(metadataCacheTtlSeconds > 0 ? metadataCacheTtlSeconds : 60);
     }
 
     private async Task<(DbConnection Conn, bool ShouldDispose)> GetOpenConnectionAsync()
     {
-        var conn = _connectionFactory() ?? throw new InvalidOperationException("La fábrica de conexión devolvió null.");
+        DbConnection conn;
+        try
+        {
+            conn = _connectionFactory() ?? throw new InvalidOperationException("La fábrica de conexión devolvió null.");
+        }
+        catch (Exception ex)
+        {
+            // Best-effort audit log for connection creation failure
+            try { (ServiceProviderAccessor.Current?.GetService(typeof(IAuditLogger)) as IAuditLogger)?.LogToolCall("-", "GetOpenConnectionAsync", ex.Message, false, "DB-CONN-ERR"); } catch { }
+            throw new InvalidOperationException("No se pudo crear la conexión de base de datos.", ex);
+        }
+
         bool shouldDispose = conn.State == ConnectionState.Closed || conn.State == ConnectionState.Broken;
         if (shouldDispose)
         {
-            await conn.OpenAsync();
+            try
+            {
+                await conn.OpenAsync();
+            }
+            catch (Exception ex)
+            {
+                // Best-effort audit log for open failure
+                try { (ServiceProviderAccessor.Current?.GetService(typeof(IAuditLogger)) as IAuditLogger)?.LogToolCall("-", "GetOpenConnectionAsync", ex.Message, false, "DB-OPEN-ERR"); } catch { }
+                throw new InvalidOperationException("No se pudo abrir la conexión a la base de datos.", ex);
+            }
         }
+
         return (conn, shouldDispose);
     }
 
     public async Task<IEnumerable<string>> GetTablesAsync()
     {
+        if (TryGetCachedValue("metadata:tables", out IEnumerable<string>? cachedTables))
+            return cachedTables!;
+
         var tables = new List<string>();
         var (conn, shouldDispose) = await GetOpenConnectionAsync();
         try
         {
             using var cmd = conn.CreateCommand();
+            cmd.CommandTimeout = _defaultTimeoutSeconds;
             cmd.CommandText = "SELECT TABLE_SCHEMA + '.' + TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE'";
             using var reader = await cmd.ExecuteReaderAsync();
             while (await reader.ReadAsync())
@@ -39,16 +76,22 @@ public class SqlServerMetadataProvider : IMetadataProvider
         {
             if (shouldDispose) conn.Dispose();
         }
+
+        SetCachedValue("metadata:tables", tables);
         return tables;
     }
 
     public async Task<IEnumerable<string>> GetViewsAsync()
     {
+        if (TryGetCachedValue("metadata:views", out IEnumerable<string>? cachedViews))
+            return cachedViews!;
+
         var views = new List<string>();
         var (conn, shouldDispose) = await GetOpenConnectionAsync();
         try
         {
             using var cmd = conn.CreateCommand();
+            cmd.CommandTimeout = _defaultTimeoutSeconds;
             cmd.CommandText = "SELECT TABLE_SCHEMA + '.' + TABLE_NAME FROM INFORMATION_SCHEMA.VIEWS";
             using var reader = await cmd.ExecuteReaderAsync();
             while (await reader.ReadAsync())
@@ -58,16 +101,22 @@ public class SqlServerMetadataProvider : IMetadataProvider
         {
             if (shouldDispose) conn.Dispose();
         }
+
+        SetCachedValue("metadata:views", views);
         return views;
     }
 
     public async Task<IEnumerable<string>> GetStoredProceduresAsync()
     {
+        if (TryGetCachedValue("metadata:procedures", out IEnumerable<string>? cachedProcedures))
+            return cachedProcedures!;
+
         var procs = new List<string>();
         var (conn, shouldDispose) = await GetOpenConnectionAsync();
         try
         {
             using var cmd = conn.CreateCommand();
+            cmd.CommandTimeout = _defaultTimeoutSeconds;
             cmd.CommandText = "SELECT SPECIFIC_SCHEMA + '.' + SPECIFIC_NAME FROM INFORMATION_SCHEMA.ROUTINES WHERE ROUTINE_TYPE = 'PROCEDURE'";
             using var reader = await cmd.ExecuteReaderAsync();
             while (await reader.ReadAsync())
@@ -77,16 +126,22 @@ public class SqlServerMetadataProvider : IMetadataProvider
         {
             if (shouldDispose) conn.Dispose();
         }
+
+        SetCachedValue("metadata:procedures", procs);
         return procs;
     }
 
     public async Task<IEnumerable<ForeignKeyInfo>> GetForeignKeysAsync()
     {
+        if (TryGetCachedValue("metadata:foreignkeys", out IEnumerable<ForeignKeyInfo>? cachedFks))
+            return cachedFks!;
+
         var fks = new List<ForeignKeyInfo>();
         var (conn, shouldDispose) = await GetOpenConnectionAsync();
         try
         {
             using var cmd = conn.CreateCommand();
+            cmd.CommandTimeout = _defaultTimeoutSeconds;
             cmd.CommandText = @"SELECT 
             fk.name AS ForeignKey,
             tp.name AS TableName,
@@ -116,10 +171,15 @@ public class SqlServerMetadataProvider : IMetadataProvider
         {
             if (shouldDispose) conn.Dispose();
         }
+
+        SetCachedValue("metadata:foreignkeys", fks);
         return fks;
     }
 
     public async Task<List<Dictionary<string, object?>>> ExecuteQueryAsync(string query)
+        => await ExecuteQueryAsync(query, _defaultMaxRows, _defaultTimeoutSeconds, CancellationToken.None);
+
+    public async Task<List<Dictionary<string, object?>>> ExecuteQueryAsync(string query, int maxRows, int timeoutSeconds, CancellationToken cancellationToken = default)
     {
         var results = new List<Dictionary<string, object?>>();
         var (conn, shouldDispose) = await GetOpenConnectionAsync();
@@ -127,14 +187,18 @@ public class SqlServerMetadataProvider : IMetadataProvider
         {
             using var cmd = conn.CreateCommand();
             cmd.CommandText = query;
-            using var reader = await cmd.ExecuteReaderAsync();
-            while (await reader.ReadAsync())
+            cmd.CommandTimeout = timeoutSeconds > 0 ? timeoutSeconds : _defaultTimeoutSeconds;
+
+            var effectiveMaxRows = maxRows > 0 ? maxRows : _defaultMaxRows;
+
+            using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
+            while (results.Count < effectiveMaxRows && await reader.ReadAsync(cancellationToken))
             {
                 var row = new Dictionary<string, object?>();
                 for (int i = 0; i < reader.FieldCount; i++)
                 {
                     var colName = reader.GetName(i) ?? $"col{i}";
-                    row[colName] = await reader.IsDBNullAsync(i) ? null : reader.GetValue(i);
+                    row[colName] = await reader.IsDBNullAsync(i, cancellationToken) ? null : reader.GetValue(i);
                 }
                 results.Add(row);
             }
@@ -155,6 +219,7 @@ public class SqlServerMetadataProvider : IMetadataProvider
             using var cmd = conn.CreateCommand();
             cmd.CommandText = procedureName;
             cmd.CommandType = System.Data.CommandType.StoredProcedure;
+            cmd.CommandTimeout = _defaultTimeoutSeconds;
             if (parameters != null)
             {
                 foreach (var kv in parameters)
@@ -186,6 +251,10 @@ public class SqlServerMetadataProvider : IMetadataProvider
 
     public async Task<IEnumerable<ColumnInfo>> GetColumnsAsync(string tableOrView)
     {
+        var cacheKey = $"metadata:columns:{tableOrView.Trim()}";
+        if (TryGetCachedValue(cacheKey, out IEnumerable<ColumnInfo>? cachedColumns))
+            return cachedColumns!;
+
         var columns = new List<ColumnInfo>();
         string schema = "dbo";
         string name = tableOrView;
@@ -199,6 +268,7 @@ public class SqlServerMetadataProvider : IMetadataProvider
         using var conn = _connectionFactory();
         await conn.OpenAsync();
         using var cmd = conn.CreateCommand();
+        cmd.CommandTimeout = _defaultTimeoutSeconds;
 
         if (name.StartsWith("#"))
         {
@@ -247,6 +317,60 @@ public class SqlServerMetadataProvider : IMetadataProvider
                 MaxLength = await reader.IsDBNullAsync(3) ? null : reader.GetInt32(3)
             });
         }
+
+        SetCachedValue(cacheKey, columns);
         return columns;
+    }
+
+    private bool TryGetCachedValue<T>(string key, out T? value)
+    {
+        var now = DateTimeOffset.UtcNow;
+
+        lock (_cacheLock)
+        {
+            if (_metadataCache.TryGetValue(key, out var entry))
+            {
+                if (entry.ExpiresAt > now && entry.Value is T typed)
+                {
+                    value = typed;
+                    return true;
+                }
+
+                _metadataCache.Remove(key);
+            }
+        }
+
+        value = default;
+        return false;
+    }
+
+    private void SetCachedValue<T>(string key, T value)
+    {
+        var expiresAt = DateTimeOffset.UtcNow.Add(_metadataCacheTtl);
+        var cacheEntry = new CacheEntry(expiresAt, value!);
+
+        lock (_cacheLock)
+        {
+            _metadataCache[key] = cacheEntry;
+        }
+    }
+
+    private sealed record CacheEntry(DateTimeOffset ExpiresAt, object Value);
+
+    // IMetadataCache implementation
+    public void ClearCache()
+    {
+        lock (_cacheLock)
+        {
+            _metadataCache.Clear();
+        }
+    }
+
+    public Dictionary<string, DateTimeOffset> GetCacheStatus()
+    {
+        lock (_cacheLock)
+        {
+            return _metadataCache.ToDictionary(kv => kv.Key, kv => kv.Value.ExpiresAt);
+        }
     }
 }

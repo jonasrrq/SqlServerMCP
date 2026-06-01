@@ -343,7 +343,7 @@ namespace SqlServerMCP.Tests
             public override short GetInt16(int ordinal) => throw new NotImplementedException();
             public override long GetInt64(int ordinal) => throw new NotImplementedException();
             public override int GetOrdinal(string name) => throw new NotImplementedException();
-            public override int GetValues(object[] values) => throw new NotImplementedException();
+            public override int GetValues(object?[] values) => throw new NotImplementedException();
         }
     }
     // Fin de la clase SqlServerMetadataProviderTests
@@ -403,21 +403,21 @@ namespace SqlServerMCP.Tests
     public class SqlParameterCollectionMock : DbParameterCollection
     {
         private readonly List<DbParameter> _list = new();
-        public override int Add(object value) { _list.Add((DbParameter)value); return _list.Count - 1; }
+        public override int Add(object? value) { _list.Add((DbParameter)value!); return _list.Count - 1; }
         public override void AddRange(Array values) { foreach (var v in values) Add(v); }
         public override void Clear() => _list.Clear();
-        public override bool Contains(object value) => _list.Contains((DbParameter)value);
+        public override bool Contains(object? value) => _list.Contains((DbParameter)value!);
         public override bool Contains(string value) => _list.Any(p => p.ParameterName == value);
         public override void CopyTo(Array array, int index) => _list.ToArray().CopyTo(array, index);
         public override int Count => _list.Count;
         public override System.Collections.IEnumerator GetEnumerator() => _list.GetEnumerator();
-        public override int IndexOf(object value) => _list.IndexOf((DbParameter)value);
+        public override int IndexOf(object? value) => _list.IndexOf((DbParameter)value!);
         public override int IndexOf(string parameterName) => _list.FindIndex(p => p.ParameterName == parameterName);
         public override void Insert(int index, object value) => _list.Insert(index, (DbParameter)value);
         public override bool IsFixedSize => false;
         public override bool IsReadOnly => false;
         public override bool IsSynchronized => false;
-        public override void Remove(object value) => _list.Remove((DbParameter)value);
+        public override void Remove(object? value) => _list.Remove((DbParameter)value!);
         public override void RemoveAt(int index) => _list.RemoveAt(index);
         public override void RemoveAt(string parameterName) => _list.RemoveAt(IndexOf(parameterName));
         public override object SyncRoot => this;
