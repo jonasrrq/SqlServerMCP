@@ -1,0 +1,75 @@
+{
+  "tools": [
+    {
+      "name": "ExecuteQuery",
+      "description": "Ejecuta consultas SQL de solo lectura (SELECT / WITH).",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "query": { "type": "string" },
+          "maxRows": { "type": "integer" },
+          "timeoutSeconds": { "type": "integer" }
+        },
+        "required": ["query"]
+      },
+      "output": {
+        "type": "object",
+        "properties": {
+          "rows": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "columns": { "type": "array", "items": { "type": "string" } },
+                "values": { "type": "array", "items": { "type": "array" } }
+              }
+            }
+          },
+          "rowCount": { "type": "integer" }
+        }
+      }
+    },
+    {
+      "name": "GetMetadata",
+      "description": "Lista tablas, vistas y procedimientos.",
+      "parameters": { "type": "object", "properties": { "filter": { "type": "string" } } },
+      "output": {
+        "type": "object",
+        "properties": {
+          "tables": { "type": "array", "items": { "type": "object", "properties": { "name": { "type": "string" }, "schema": { "type": "string" }, "type": { "type": "string" } } } },
+          "procedures": { "type": "array" }
+        }
+      }
+    },
+    {
+      "name": "GetColumns",
+      "description": "Devuelve columnas de una tabla o vista.",
+      "parameters": { "type": "object", "properties": { "objectName": { "type": "string" } }, "required": ["objectName"] },
+      "output": { "type": "object", "properties": { "columns": { "type": "array", "items": { "type": "object", "properties": { "name": { "type": "string" }, "dataType": { "type": "string" }, "isNullable": { "type": "boolean" }, "maxLength": { "type": "integer" } } } } } }
+    },
+    {
+      "name": "ExecuteStoredProcedure",
+      "description": "Ejecuta un procedimiento almacenado con parámetros.",
+      "parameters": { "type": "object", "properties": { "procedureName": { "type": "string" }, "parameters": { "type": "object" } }, "required": ["procedureName"] },
+      "output": { "type": "object", "properties": { "resultSets": { "type": "array" } } }
+    },
+    {
+      "name": "ClearMetadataCache",
+      "description": "Limpia la caché de metadatos.",
+      "parameters": { "type": "object" },
+      "output": { "type": "object" }
+    },
+    {
+      "name": "GetMetadataCacheStatus",
+      "description": "Devuelve estado de la caché de metadatos.",
+      "parameters": { "type": "object" },
+      "output": { "type": "object" }
+    },
+    {
+      "name": "GetAuditEntries",
+      "description": "Devuelve entradas de auditoría en memoria.",
+      "parameters": { "type": "object", "properties": { "since": { "type": "string", "format": "date-time" }, "limit": { "type": "integer" } } },
+      "output": { "type": "object", "properties": { "entries": { "type": "array" } } }
+    }
+  ]
+}

@@ -270,6 +270,27 @@ El ZIP resultante quedará en `./dist/mcp-client-skill.zip`.
 
 ¿Quieres que además publique automáticamente el skill en un repo Git (crear branch + commit + tag)? Si es así dime el remote y el branch destino.
 
+## Skill para agentes (machine-readable)
+
+Además del `SKILL.md`, el skill ahora incluye un descriptor machine-readable con las herramientas y sus esquemas en JSON:
+
+- `./.agents/skills/mcp-client/tools.json` — lista de herramientas, parámetros y esquema de salida (JSON Schema). Esto facilita que agentes (Copilot u otros) descubran y validen parámetros automáticamente.
+
+Los consumidores automáticos pueden usar `tools.json` para generar formularios, validadores o helpers de invocación en clientes.
+
+Ejemplo rápido (validar payload en Node con Ajv):
+
+```js
+import Ajv from 'ajv';
+import tools from './.agents/skills/mcp-client/tools.json';
+
+const ajv = new Ajv();
+const schema = tools.tools.find(t => t.name === 'ExecuteQuery').parameters;
+const validate = ajv.compile(schema);
+const payload = { query: 'SELECT TOP 1 * FROM sys.tables' };
+console.log(validate(payload));
+```
+
 ## Distribución del skill `mcp-client`
 
 Incluimos un skill cliente en `.agents/skills/mcp-client/SKILL.md` dentro de este repositorio. Este skill contiene ejemplos listos para usar, recomendaciones de seguridad y un "cheatsheet" de herramientas expuestas.
