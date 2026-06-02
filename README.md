@@ -160,7 +160,7 @@ Si eliges modo HTTP/Streamable, usa:
       ],
       "env": {
         "SQLSERVER_PASSWORD": "tu_clave"
-      ]
+      }
     }
   }
 }
