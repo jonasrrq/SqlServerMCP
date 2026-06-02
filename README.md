@@ -146,7 +146,7 @@ Si eliges modo HTTP/Streamable, usa:
 ```jsonc
 {
   "servers": {
-    "mcp-server-sqlserver": {
+    "SqlServerMCP": {
       "command": "dotnet",
       "args": [
         "run",
@@ -173,7 +173,7 @@ Si tienes el servidor levantado en HTTP, registra la URL base MCP:
 ```jsonc
 {
   "servers": {
-    "mcp-server-sqlserver-http": {
+    "SqlServerMCP": {
       "url": "http://localhost:5000",
       "type": "http"
     }
@@ -186,7 +186,7 @@ Con auth opcional habilitada en HTTP:
 ```jsonc
 {
   "servers": {
-    "mcp-server-sqlserver-http": {
+    "SqlServerMCP": {
       "url": "http://localhost:5000",
       "type": "http",
       "headers": {
@@ -255,9 +255,9 @@ Si necesitas ejemplos concretos para un cliente (Node/Python/Rust), indícamelo 
 
 ## Publicar y compartir el skill
 
-Hemos añadido las herramientas necesarias para generar un paquete de distribución del skill `mcp-client`:
+Hemos añadido las herramientas necesarias para generar un paquete de distribución del skill `SqlServerMCP`:
 
-- `./.agents/skills/mcp-client/SKILL.md` — el contenido a distribuir (licencia MIT).
+- `./.agents/skills/SqlServerMCP/SKILL.md` — el contenido a distribuir (licencia MIT).
 - `make-release.ps1` — script PowerShell para copiar y crear un ZIP listo para distribuir.
 
 Para crear el paquete de release desde la raíz del repo:
@@ -266,7 +266,7 @@ Para crear el paquete de release desde la raíz del repo:
 .\make-release.ps1
 ```
 
-El ZIP resultante quedará en `./dist/mcp-client-skill.zip`.
+El ZIP resultante quedará en `./dist/SqlServerMCP-skill.zip`.
 
 ¿Quieres que además publique automáticamente el skill en un repo Git (crear branch + commit + tag)? Si es así dime el remote y el branch destino.
 
@@ -274,7 +274,7 @@ El ZIP resultante quedará en `./dist/mcp-client-skill.zip`.
 
 Además del `SKILL.md`, el skill ahora incluye un descriptor machine-readable con las herramientas y sus esquemas en JSON:
 
-- `./.agents/skills/mcp-client/tools.json` — lista de herramientas, parámetros y esquema de salida (JSON Schema). Esto facilita que agentes (Copilot u otros) descubran y validen parámetros automáticamente.
+- `./.agents/skills/SqlServerMCP/tools.json` — lista de herramientas, parámetros y esquema de salida (JSON Schema). Esto facilita que agentes (Copilot u otros) descubran y validen parámetros automáticamente.
 
 Los consumidores automáticos pueden usar `tools.json` para generar formularios, validadores o helpers de invocación en clientes.
 
@@ -282,7 +282,7 @@ Ejemplo rápido (validar payload en Node con Ajv):
 
 ```js
 import Ajv from 'ajv';
-import tools from './.agents/skills/mcp-client/tools.json';
+import tools from './.agents/skills/SqlServerMCP/tools.json';
 
 const ajv = new Ajv();
 const schema = tools.tools.find(t => t.name === 'ExecuteQuery').parameters;
@@ -291,13 +291,13 @@ const payload = { query: 'SELECT TOP 1 * FROM sys.tables' };
 console.log(validate(payload));
 ```
 
-## Distribución del skill `mcp-client`
+## Distribución del skill `SqlServerMCP`
 
-Incluimos un skill cliente en `.agents/skills/mcp-client/SKILL.md` dentro de este repositorio. Este skill contiene ejemplos listos para usar, recomendaciones de seguridad y un "cheatsheet" de herramientas expuestas.
+Incluimos un skill cliente en `.agents/skills/SqlServerMCP/SKILL.md` dentro de este repositorio. Este skill contiene ejemplos listos para usar, recomendaciones de seguridad y un "cheatsheet" de herramientas expuestas.
 
 Para usarlo localmente o distribuirlo:
 
-- Incluye la carpeta `.agents/skills/mcp-client` en tu paquete/repo. El archivo principal es `SKILL.md` con licencia MIT.
+- Incluye la carpeta `.agents/skills/SqlServerMCP` en tu paquete/repo. El archivo principal es `SKILL.md` con licencia MIT.
 - Opcional: publica el directorio como un paquete (por ejemplo, npm o un repositorio Git) para que tus equipos puedan instalarlo/consultarlo.
 
 Ejemplo de comandos para preparar la distribución (opcional):
@@ -305,10 +305,10 @@ Ejemplo de comandos para preparar la distribución (opcional):
 ```powershell
 # copia el skill al folder de release
 mkdir -Force .\dist\skills
-robocopy .\.agents\skills\mcp-client .\dist\skills\mcp-client /E
+robocopy .\.agents\skills\SqlServerMCP .\dist\skills\SqlServerMCP /E
 
 # empaqueta el release (zip)
-powershell -Command "Compress-Archive -Path .\dist\skills\mcp-client -DestinationPath .\dist\mcp-client-skill.zip -Force"
+powershell -Command "Compress-Archive -Path .\dist\skills\SqlServerMCP -DestinationPath .\dist\SqlServerMCP-skill.zip -Force"
 ```
 
 Si quieres, creo un script `make-release.ps1` que automatice la copia y el zip, y actualizo el README con instrucciones paso a paso para publicar el skill.
