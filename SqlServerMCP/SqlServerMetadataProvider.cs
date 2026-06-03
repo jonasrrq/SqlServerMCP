@@ -265,61 +265,67 @@ public class SqlServerMetadataProvider : IMetadataProvider, IMetadataCache
             name = parts[1];
         }
 
-        using var conn = _connectionFactory();
-        await conn.OpenAsync();
-        using var cmd = conn.CreateCommand();
-        cmd.CommandTimeout = _defaultTimeoutSeconds;
-
-        if (name.StartsWith("#"))
+        var (conn, shouldDispose) = await GetOpenConnectionAsync();
+        try
         {
-            // Las temp tables locales se registran en tempdb y su nombre real tiene un sufijo.
-            cmd.CommandText = @"SELECT COLUMN_NAME, DATA_TYPE, IS_NULLABLE, CHARACTER_MAXIMUM_LENGTH
+            using var cmd = conn.CreateCommand();
+            cmd.CommandTimeout = _defaultTimeoutSeconds;
+
+            if (name.StartsWith("#"))
+            {
+                // Las temp tables locales se registran en tempdb y su nombre real tiene un sufijo.
+                cmd.CommandText = @"SELECT COLUMN_NAME, DATA_TYPE, IS_NULLABLE, CHARACTER_MAXIMUM_LENGTH
             FROM tempdb.INFORMATION_SCHEMA.COLUMNS
             WHERE TABLE_NAME LIKE @name";
-            var pName = cmd.CreateParameter();
-            pName.ParameterName = "@name";
-            pName.Value = name + "%";
-            cmd.Parameters.Add(pName);
+                var pName = cmd.CreateParameter();
+                pName.ParameterName = "@name";
+                pName.Value = name + "%";
+                cmd.Parameters.Add(pName);
 
-            // Si el usuario pasó esquema explícito (p. ej. "dbo.#TestTable"), podemos filtrar por esquema.
-            if (!string.IsNullOrEmpty(schema))
-            {
-                cmd.CommandText += " AND TABLE_SCHEMA = @schema";
-                var pSchema = cmd.CreateParameter();
-                pSchema.ParameterName = "@schema";
-                pSchema.Value = schema;
-                cmd.Parameters.Add(pSchema);
+                // Si el usuario pasó esquema explícito (p. ej. "dbo.#TestTable"), podemos filtrar por esquema.
+                if (!string.IsNullOrEmpty(schema))
+                {
+                    cmd.CommandText += " AND TABLE_SCHEMA = @schema";
+                    var pSchema = cmd.CreateParameter();
+                    pSchema.ParameterName = "@schema";
+                    pSchema.Value = schema;
+                    cmd.Parameters.Add(pSchema);
+                }
             }
-        }
-        else
-        {
-            cmd.CommandText = @"SELECT COLUMN_NAME, DATA_TYPE, IS_NULLABLE, CHARACTER_MAXIMUM_LENGTH
+            else
+            {
+                cmd.CommandText = @"SELECT COLUMN_NAME, DATA_TYPE, IS_NULLABLE, CHARACTER_MAXIMUM_LENGTH
             FROM INFORMATION_SCHEMA.COLUMNS
             WHERE TABLE_SCHEMA = @schema AND TABLE_NAME = @name";
-            var p1 = cmd.CreateParameter();
-            p1.ParameterName = "@schema";
-            p1.Value = schema;
-            cmd.Parameters.Add(p1);
-            var p2 = cmd.CreateParameter();
-            p2.ParameterName = "@name";
-            p2.Value = name;
-            cmd.Parameters.Add(p2);
-        }
+                var p1 = cmd.CreateParameter();
+                p1.ParameterName = "@schema";
+                p1.Value = schema;
+                cmd.Parameters.Add(p1);
+                var p2 = cmd.CreateParameter();
+                p2.ParameterName = "@name";
+                p2.Value = name;
+                cmd.Parameters.Add(p2);
+            }
 
-        using var reader = await cmd.ExecuteReaderAsync();
-        while (await reader.ReadAsync())
-        {
-            columns.Add(new ColumnInfo
+            using var reader = await cmd.ExecuteReaderAsync();
+            while (await reader.ReadAsync())
             {
-                Name = reader.GetString(0),
-                DataType = reader.GetString(1),
-                IsNullable = reader.GetString(2) == "YES",
-                MaxLength = await reader.IsDBNullAsync(3) ? null : reader.GetInt32(3)
-            });
-        }
+                columns.Add(new ColumnInfo
+                {
+                    Name = reader.GetString(0),
+                    DataType = reader.GetString(1),
+                    IsNullable = reader.GetString(2) == "YES",
+                    MaxLength = await reader.IsDBNullAsync(3) ? null : reader.GetInt32(3)
+                });
+            }
 
-        SetCachedValue(cacheKey, columns);
-        return columns;
+            SetCachedValue(cacheKey, columns);
+            return columns;
+        }
+        finally
+        {
+            if (shouldDispose) conn.Dispose();
+        }
     }
 
     private bool TryGetCachedValue<T>(string key, out T? value)
