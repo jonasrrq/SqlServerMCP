@@ -40,7 +40,17 @@
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-[Gates determined based on constitution file]
+- [ ] **Principio I — Contratos MCP estables**: ¿Cambia nombre, parámetros o respuesta de
+  `GetMetadata` o `ExecuteQuery`? Si es sí → versión MAJOR + plan de migración requerido.
+- [ ] **Principio II — Secretos**: Ninguna credencial o token aparece en argumentos CLI ni
+  en la respuesta de herramientas. Toda entrada nueva de secreto usa variable de entorno.
+- [ ] **Principio III — Tests**: Tests unitarios y/o contract tests definidos ANTES de la
+  implementación. Los archivos de test existentes continúan en verde.
+- [ ] **Principio IV — Observabilidad**: Nuevas rutas de error usan código `MCP-*-NNN`.
+  Excepciones pasan por `DiagnosticSanitizer`. Llamadas se registran en `IAuditLogger`.
+- [ ] **Principio V — Simplicidad**: La superficie MCP no crece sin justificación. Cualquier
+  nueva consulta SQL pasa por `QuerySecurity.ValidateReadOnlyQuery`. Límites por defecto
+  (rows, timeout, rate) se mantienen o se hacen configurables por variable de entorno.
 
 ## Project Structure
 
