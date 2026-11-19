@@ -306,7 +306,9 @@ SQL login.
 - [x] `make-release.ps1` validates `SKILL.md` and `tools.json` before packaging.
 - [x] Distribution validated: `dist/SqlServerMCP-skill.zip` contains `SKILL.md` and
       `tools.json`; tool names match `tools/list` (7/7).
-- [x] Build 0 errors, tests 52/52 after the changes.
+- [x] Added `MCP_DB_PROVIDER` / `--db-provider` with default `sqlserver`, fail-fast
+      validation for unsupported engines, startup logging, and tests.
+- [x] Build 0 errors, tests 60/60 after the changes.
 
 ## Execution notes
 

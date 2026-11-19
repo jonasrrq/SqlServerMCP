@@ -5,11 +5,22 @@ Servidor MCP en C# para consultar metadatos y ejecutar consultas. Hoy implementa
 ## Estado actual del proyecto
 
 - **Framework**: `net11.0`
-- **Motor actual**: SQL Server
+- **Motor actual**: SQL Server (`MCP_DB_PROVIDER=sqlserver`)
 - **Gestión de paquetes**: centralizada con `Directory.Packages.props`
 - **Transporte MCP**:
   - `stdio` (integración local con editores/agentes)
   - HTTP (Streamable HTTP) usando `ModelContextProtocol.AspNetCore`
+
+## Selección de motor
+
+El servidor valida el motor al arrancar:
+
+- CLI: `--db-provider sqlserver`
+- Entorno: `MCP_DB_PROVIDER=sqlserver`
+- Default: `sqlserver`
+- Valores soportados hoy: `sqlserver`. Cualquier otro valor falla al inicio con `InvalidOperationException`.
+
+Este selector es el punto de extensión para PostgreSQL, MySQL y SQLite.
 
 ## Versiones NuGet vigentes
 
@@ -109,6 +120,7 @@ Edita `%APPDATA%\Claude\claude_desktop_config.json` y añade:
         "--mode", "stdio"
       ],
       "env": {
+        "MCP_DB_PROVIDER": "sqlserver",
         "SQLSERVER_CONNECTION_STRING": "Server=localhost;Database=Editoriales_Net;User Id=sa;Password=TU_CLAVE;Encrypt=Mandatory;TrustServerCertificate=True;"
       }
     }
@@ -138,6 +150,7 @@ También puedes declararlo en `.mcp.json` en la raíz del proyecto:
       "command": "dnx",
       "args": ["JR.DatabaseMCP@0.1.0-beta", "--", "--mode", "stdio"],
       "env": {
+        "MCP_DB_PROVIDER": "sqlserver",
         "SQLSERVER_CONNECTION_STRING": "Server=localhost;Database=Editoriales_Net;User Id=sa;Password=TU_CLAVE;Encrypt=Mandatory;TrustServerCertificate=True;"
       }
     }
@@ -177,6 +190,7 @@ Formato para VS Code / Visual Studio:
       "command": "dnx",
       "args": ["JR.DatabaseMCP@0.1.0-beta", "--", "--mode", "stdio"],
       "env": {
+        "MCP_DB_PROVIDER": "sqlserver",
         "SQLSERVER_CONNECTION_STRING": "Server=localhost;Database=Editoriales_Net;User Id=sa;Password=TU_CLAVE;Encrypt=Mandatory;TrustServerCertificate=True;"
       }
     }
@@ -277,6 +291,7 @@ Para clientes que lanzan procesos locales, puedes usar `dotnet run` en lugar de 
         "--mode", "stdio"
       ],
       "env": {
+        "MCP_DB_PROVIDER": "sqlserver",
         "SQLSERVER_CONNECTION_STRING": "Server=localhost;Database=Editoriales_Net;User Id=sa;Password=TU_CLAVE;Encrypt=Mandatory;TrustServerCertificate=True;"
       }
     }
@@ -418,6 +433,7 @@ La auditoría registra intentos y resultados de ejecución de consultas con sani
 - `SQLSERVER_ENCRYPT`
 - `SQLSERVER_TRUST_SERVER_CERTIFICATE`
 - `SQLSERVER_CONNECT_TIMEOUT`
+- `MCP_DB_PROVIDER`
 - `MCP_MODE`
 - `MCP_HTTP_URL`
 - `MCP_HTTP_AUTH_ENABLED`

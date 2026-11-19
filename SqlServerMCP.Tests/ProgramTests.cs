@@ -103,5 +103,69 @@ namespace SqlServerMCP.Tests
                 Environment.SetEnvironmentVariable("SQLSERVER_PASSWORD", oldPassword);
             }
         }
+
+        [Fact]
+        public void ConfigureServer_DefaultProvider_IsSqlServer()
+        {
+            var oldPassword = Environment.GetEnvironmentVariable("SQLSERVER_PASSWORD");
+            var oldProvider = Environment.GetEnvironmentVariable("MCP_DB_PROVIDER");
+            Environment.SetEnvironmentVariable("SQLSERVER_PASSWORD", "test-from-env");
+            Environment.SetEnvironmentVariable("MCP_DB_PROVIDER", null);
+
+            try
+            {
+                Program.ConfigureServer(new[] { "--mode", "stdio" }, out _, out var engine, out _);
+                engine.Should().Be(DatabaseEngine.SqlServer);
+            }
+            finally
+            {
+                Environment.SetEnvironmentVariable("SQLSERVER_PASSWORD", oldPassword);
+                Environment.SetEnvironmentVariable("MCP_DB_PROVIDER", oldProvider);
+            }
+        }
+
+        [Fact]
+        public void ConfigureServer_CliProviderOverridesEnvironment()
+        {
+            var oldPassword = Environment.GetEnvironmentVariable("SQLSERVER_PASSWORD");
+            var oldProvider = Environment.GetEnvironmentVariable("MCP_DB_PROVIDER");
+            Environment.SetEnvironmentVariable("SQLSERVER_PASSWORD", "test-from-env");
+            Environment.SetEnvironmentVariable("MCP_DB_PROVIDER", "postgresql");
+
+            try
+            {
+                var args = new[] { "--mode", "stdio", "--db-provider", "sqlserver" };
+                Program.ConfigureServer(args, out _, out var engine, out _);
+                engine.Should().Be(DatabaseEngine.SqlServer);
+            }
+            finally
+            {
+                Environment.SetEnvironmentVariable("SQLSERVER_PASSWORD", oldPassword);
+                Environment.SetEnvironmentVariable("MCP_DB_PROVIDER", oldProvider);
+            }
+        }
+
+        [Fact]
+        public void ConfigureServer_UnsupportedProvider_Throws()
+        {
+            var oldPassword = Environment.GetEnvironmentVariable("SQLSERVER_PASSWORD");
+            var oldProvider = Environment.GetEnvironmentVariable("MCP_DB_PROVIDER");
+            Environment.SetEnvironmentVariable("SQLSERVER_PASSWORD", "test-from-env");
+            Environment.SetEnvironmentVariable("MCP_DB_PROVIDER", "postgresql");
+
+            try
+            {
+                var act = () => Program.ConfigureServer(new[] { "--mode", "stdio" }, out _, out _, out _);
+                act.Should()
+                    .Throw<InvalidOperationException>()
+                    .WithMessage("*postgresql*")
+                    .WithMessage("*sqlserver*");
+            }
+            finally
+            {
+                Environment.SetEnvironmentVariable("SQLSERVER_PASSWORD", oldPassword);
+                Environment.SetEnvironmentVariable("MCP_DB_PROVIDER", oldProvider);
+            }
+        }
     }
 }

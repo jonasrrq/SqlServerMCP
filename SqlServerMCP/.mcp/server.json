@@ -74,6 +74,18 @@
               "isRequired": false
             }
           }
+        },
+        {
+          "name": "MCP_DB_PROVIDER",
+          "value": "{mcp_db_provider}",
+          "variables": {
+            "mcp_db_provider": {
+              "description": "Database engine. Currently only sqlserver is supported.",
+              "isRequired": false,
+              "default": "sqlserver",
+              "choices": ["sqlserver"]
+            }
+          }
         }
       ]
     }

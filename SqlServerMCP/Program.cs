@@ -13,10 +13,17 @@ public class Program
     private const int DefaultConnectTimeoutSeconds = 30;
 
     public static void ConfigureServer(string[] args, out string mode, out string connectionString)
+        => ConfigureServer(args, out mode, out _, out connectionString);
+
+    public static void ConfigureServer(string[] args, out string mode, out DatabaseEngine engine, out string connectionString)
     {
         mode = GetArgValue(args, "--mode")
             ?? Environment.GetEnvironmentVariable("MCP_MODE")
             ?? "http";
+
+        engine = DatabaseEngineSelector.Parse(
+            GetArgValue(args, DatabaseEngineSelector.CliOption)
+            ?? Environment.GetEnvironmentVariable(DatabaseEngineSelector.EnvironmentVariable));
 
         var fromEnvironment = Environment.GetEnvironmentVariable("SQLSERVER_CONNECTION_STRING");
         if (!string.IsNullOrWhiteSpace(fromEnvironment))
@@ -68,7 +75,7 @@ public class Program
     {
         LoadDotEnvIfPresent();
 
-        ConfigureServer(args, out var mode, out var connectionString);
+        ConfigureServer(args, out var mode, out var engine, out var connectionString);
         var isHttpMode = mode.Equals("http", StringComparison.OrdinalIgnoreCase)
             || mode.Equals("sse", StringComparison.OrdinalIgnoreCase);
 
@@ -102,6 +109,7 @@ public class Program
             builder.Services.AddSingleton(hostGuardOptions);
 
             var app = builder.Build();
+            app.Logger.LogInformation("Database provider: {Provider}", engine);
             // expose service provider for static access to best-effort loggers
             ServiceProviderAccessor.Current = app.Services;
 
@@ -138,6 +146,9 @@ public class Program
                 .WithToolsFromAssembly();
 
             var host = builder.Build();
+            host.Services.GetRequiredService<ILoggerFactory>()
+                .CreateLogger("SqlServerMCP")
+                .LogInformation("Database provider: {Provider}", engine);
             ServiceProviderAccessor.Current = host.Services;
             await host.RunAsync();
         }
