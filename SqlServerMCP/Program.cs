@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Server;
 using System.Text;
 
@@ -84,7 +85,6 @@ public class Program
             var defaultMaxRows = ParseInt(Environment.GetEnvironmentVariable("MCP_QUERY_MAX_ROWS"), 1000);
             var defaultTimeout = ParseInt(Environment.GetEnvironmentVariable("MCP_QUERY_TIMEOUT_SECONDS"), 30);
             var metadataCacheTtl = ParseInt(Environment.GetEnvironmentVariable("MCP_METADATA_CACHE_TTL_SECONDS"), 60);
-            var enableLegacySse = ParseBool(Environment.GetEnvironmentVariable("MCP_ENABLE_LEGACY_SSE"), false);
 
             builder.Services.AddSingleton<IMetadataProvider>(_ =>
                 new SqlServerMetadataProvider(() => new SqlConnection(connectionString), defaultTimeout, defaultMaxRows, metadataCacheTtl));
@@ -94,15 +94,6 @@ public class Program
                 {
                     // Streamable HTTP stateless por defecto.
                     options.Stateless = true;
-
-                    if (enableLegacySse)
-                    {
-                        // Si se habilita SSE legado, requiere modo stateful.
-                        options.Stateless = false;
-#pragma warning disable MCP9004
-                        options.EnableLegacySse = true;
-#pragma warning restore MCP9004
-                    }
                 })
                 .WithToolsFromAssembly();
             var hostGuardOptions = HttpHostGuardOptions.FromEnvironment();
@@ -130,6 +121,10 @@ public class Program
         else // stdio por defecto
         {
             var builder = Host.CreateApplicationBuilder(args);
+
+            // stdio usa stdout para el protocolo MCP: todos los logs van a stderr.
+            builder.Logging.AddConsole(o => o.LogToStandardErrorThreshold = LogLevel.Trace);
+
             builder.Services.AddSingleton<IAuditLogger>(_ => new InMemoryAuditLogger(ParseInt(Environment.GetEnvironmentVariable("MCP_AUDIT_MAX_ENTRIES"), 1000)));
             var defaultMaxRows = ParseInt(Environment.GetEnvironmentVariable("MCP_QUERY_MAX_ROWS"), 1000);
             var defaultTimeout = ParseInt(Environment.GetEnvironmentVariable("MCP_QUERY_TIMEOUT_SECONDS"), 30);

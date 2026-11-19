@@ -1,0 +1,85 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-10-17/server.schema.json",
+  "description": "MCP server for SQL Server metadata and read-only queries.",
+  "name": "io.github.jonasrrq/SqlServerMCP",
+  "version": "0.1.0-beta",
+  "packages": [
+    {
+      "registryType": "nuget",
+      "registryBaseUrl": "https://api.nuget.org",
+      "identifier": "Jonas.SqlServerMCP",
+      "version": "0.1.0-beta",
+      "transport": {
+        "type": "stdio"
+      },
+      "packageArguments": [
+        {
+          "type": "positional",
+          "value": "--mode"
+        },
+        {
+          "type": "positional",
+          "value": "stdio"
+        }
+      ],
+      "environmentVariables": [
+        {
+          "name": "SQLSERVER_CONNECTION_STRING",
+          "value": "{sqlserver_connection_string}",
+          "variables": {
+            "sqlserver_connection_string": {
+              "description": "Full SQL Server connection string. Takes precedence over individual settings.",
+              "isRequired": false,
+              "isSecret": true
+            }
+          }
+        },
+        {
+          "name": "SQLSERVER_PASSWORD",
+          "value": "{sqlserver_password}",
+          "variables": {
+            "sqlserver_password": {
+              "description": "SQL Server password. Required when SQLSERVER_CONNECTION_STRING is not provided.",
+              "isRequired": false,
+              "isSecret": true
+            }
+          }
+        },
+        {
+          "name": "SQLSERVER_SERVER",
+          "value": "{sqlserver_server}",
+          "variables": {
+            "sqlserver_server": {
+              "description": "SQL Server host name (default: localhost).",
+              "isRequired": false
+            }
+          }
+        },
+        {
+          "name": "SQLSERVER_DATABASE",
+          "value": "{sqlserver_database}",
+          "variables": {
+            "sqlserver_database": {
+              "description": "Database name (default: Northwind).",
+              "isRequired": false
+            }
+          }
+        },
+        {
+          "name": "SQLSERVER_USER",
+          "value": "{sqlserver_user}",
+          "variables": {
+            "sqlserver_user": {
+              "description": "SQL Server user (default: sa).",
+              "isRequired": false
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "repository": {
+    "url": "https://github.com/jonasrrq/SqlServerMCP",
+    "source": "github"
+  }
+}
