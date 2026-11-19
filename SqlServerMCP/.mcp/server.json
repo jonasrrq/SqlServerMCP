@@ -2,13 +2,13 @@
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-10-17/server.schema.json",
   "description": "MCP server for SQL Server metadata and read-only queries.",
   "name": "io.github.jonasrrq/SqlServerMCP",
-  "version": "0.1.0-beta",
+  "version": "0.2.0-beta",
   "packages": [
     {
       "registryType": "nuget",
       "registryBaseUrl": "https://api.nuget.org",
       "identifier": "JonasRq.DatabaseMCP",
-      "version": "0.1.0-beta",
+      "version": "0.2.0-beta",
       "transport": {
         "type": "stdio"
       },

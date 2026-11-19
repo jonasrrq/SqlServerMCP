@@ -5,6 +5,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
+    <NoWarn>$(NoWarn);MCPEXP001;MCPEXP005</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
@@ -16,6 +17,7 @@
     <PackageReference Include="Moq" />
     <PackageReference Include="xunit" />
     <PackageReference Include="xunit.runner.visualstudio" />
+    <PackageReference Include="ModelContextProtocol.Extensions.Skills" />
   </ItemGroup>
 
   <ItemGroup>
