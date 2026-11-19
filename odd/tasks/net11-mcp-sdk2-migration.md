@@ -312,6 +312,8 @@ SQL login.
       `mcp-name` marker required by the MCP Registry.
 - [x] Added the Trusted Publishing GitHub Actions workflow
       (`.github/workflows/publish-nuget.yml`, OIDC, tag `v*`).
+- [x] Made the real SQL Server integration test opt-in via
+      `SQLSERVER_TEST_CONNECTION_STRING` so CI can run without a database.
 - [x] Build 0 errors, tests 60/60 after the changes.
 
 ## Execution notes

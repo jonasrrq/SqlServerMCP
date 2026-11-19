@@ -351,51 +351,38 @@ namespace SqlServerMCP.Tests
 
     public class SqlServerMetadataProviderRealTests
     {
-        // Nota: Si recibe un error de LocalDB (error 50), verifique:
-        // 1. Que LocalDB esté instalado (ejecute 'sqllocaldb info' en consola).
-        // 2. Que la instancia 'MSSQLLocalDB' exista y esté iniciada ('sqllocaldb start MSSQLLocalDB').
-        // 3. Que su usuario tenga permisos y SQL Server acepte conexiones locales.
-        // 4. Si no puede usar LocalDB, cambie la cadena de conexión a una instancia SQL Server accesible.
-        // Ejemplo: "Server=localhost;Integrated Security=true;Initial Catalog=master;"
-
-        private const string ConnectionString = "Server=(localdb)\\MSSQLLocalDB;Integrated Security=true;Initial Catalog=master;";
-
+        // Integration test opt-in:
+        //   SQLSERVER_TEST_CONNECTION_STRING=Server=...;Database=...;...
+        // CI has no SQL Server, so the test returns without connecting.
         [Fact]
         public async Task GetColumnsAsync_ReturnsColumns_RealDb()
         {
+            var connectionString = Environment.GetEnvironmentVariable("SQLSERVER_TEST_CONNECTION_STRING");
+            if (string.IsNullOrWhiteSpace(connectionString))
+            {
+                // No integration database configured: nothing to validate here.
+                return;
+            }
+
+            // Arrange: crear tabla temporal
+            using var conn = new SqlConnection(connectionString);
+            await conn.OpenAsync();
+            using (var cmd = new SqlCommand("CREATE TABLE #TestTable (Id INT NOT NULL, Name NVARCHAR(50) NULL)", conn))
+                await cmd.ExecuteNonQueryAsync();
             try
             {
-                // Arrange: crear tabla temporal
-                using var conn = new SqlConnection(ConnectionString);
-                await conn.OpenAsync();
-                using (var cmd = new SqlCommand("CREATE TABLE #TestTable (Id INT NOT NULL, Name NVARCHAR(50) NULL)", conn))
-                    await cmd.ExecuteNonQueryAsync();
-                try
-                {
-                    var provider = new SqlServerMetadataProvider(() => conn);
-                    // Act
-                    var columns = await provider.GetColumnsAsync("#TestTable");
-                    // Assert
-                    columns.Should().NotBeNull();
-                    columns.Should().ContainSingle(c => c.Name == "Id" && c.DataType == "int" && c.IsNullable == false);
-                    columns.Should().ContainSingle(c => c.Name == "Name" && c.DataType == "nvarchar" && c.IsNullable == true && c.MaxLength == 50);
-                }
-                finally
-                {
-                    using (var cmd = new SqlCommand("DROP TABLE IF EXISTS TestTable", conn))
-                        await cmd.ExecuteNonQueryAsync();
-                }
+                var provider = new SqlServerMetadataProvider(() => conn);
+                // Act
+                var columns = await provider.GetColumnsAsync("#TestTable");
+                // Assert
+                columns.Should().NotBeNull();
+                columns.Should().ContainSingle(c => c.Name == "Id" && c.DataType == "int" && c.IsNullable == false);
+                columns.Should().ContainSingle(c => c.Name == "Name" && c.DataType == "nvarchar" && c.IsNullable == true && c.MaxLength == 50);
             }
-            catch (SqlException ex)
+            finally
             {
-                // Manejo específico para errores de LocalDB
-                if (ex.Message.Contains("Local Database Runtime") || ex.Message.Contains("error: 50"))
-                {
-                    // Entorno sin LocalDB disponible: omitimos validación de integración.
-                    // Los tests unitarios con mocks ya cubren la lógica de negocio del proveedor.
-                    return;
-                }
-                throw;
+                using (var cmd = new SqlCommand("DROP TABLE IF EXISTS #TestTable", conn))
+                    await cmd.ExecuteNonQueryAsync();
             }
         }
     }
