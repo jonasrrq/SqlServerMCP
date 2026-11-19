@@ -310,6 +310,8 @@ SQL login.
       validation for unsupported engines, startup logging, and tests.
 - [x] Completed NuGet metadata (author, MIT license, repository/project URL) and added the
       `mcp-name` marker required by the MCP Registry.
+- [x] Added the Trusted Publishing GitHub Actions workflow
+      (`.github/workflows/publish-nuget.yml`, OIDC, tag `v*`).
 - [x] Build 0 errors, tests 60/60 after the changes.
 
 ## Execution notes

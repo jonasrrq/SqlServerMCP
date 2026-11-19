@@ -1,0 +1,55 @@
+name: Publish NuGet package
+
+# Publishes JR.DatabaseMCP through NuGet Trusted Publishing (OIDC).
+# NuGet policy required:
+#   Repository Owner: jonasrrq
+#   Repository:       SqlServerMCP
+#   Workflow File:    publish-nuget.yml
+# GitHub Actions secret required:
+#   NUGET_USER = your nuget.org profile name (not your email)
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "11.0.x"
+
+      - name: Restore
+        run: dotnet restore SqlServerMCP.sln
+
+      - name: Build
+        run: dotnet build SqlServerMCP.sln -c Release --no-restore
+
+      - name: Test
+        run: dotnet test SqlServerMCP.sln -c Release --no-build
+
+      - name: Pack
+        run: dotnet pack SqlServerMCP/SqlServerMCP.csproj -c Release --no-build
+
+      - name: NuGet login (OIDC -> temporary API key)
+        uses: NuGet/login@v1
+        id: login
+        with:
+          user: ${{ secrets.NUGET_USER }}
+
+      - name: NuGet push
+        run: >
+          dotnet nuget push "SqlServerMCP/bin/Release/JR.DatabaseMCP.*.nupkg"
+          --api-key ${{ steps.login.outputs.NUGET_API_KEY }}
+          --source https://api.nuget.org/v3/index.json
+          --skip-duplicate

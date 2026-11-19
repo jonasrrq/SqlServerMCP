@@ -102,6 +102,22 @@ dotnet pack SqlServerMCP/SqlServerMCP.csproj -c Release
 
 El paquete `JR.DatabaseMCP` declara `--mode stdio` y los inputs `SQLSERVER_*` para clientes MCP. El nombre es genérico para futuros motores; el binario actual implementa SQL Server. La publicación en NuGet.org queda como decisión de release.
 
+### Publicación automatizada (Trusted Publishing)
+
+El workflow `.github/workflows/publish-nuget.yml` publica el paquete al pushear un tag `v*`. Usa OIDC, así que no requiere una API key de larga duración.
+
+Requisitos:
+- Política en nuget.org → **Trusted Publishing**: owner `jonasrrq`, repository `SqlServerMCP`, workflow file `publish-nuget.yml`.
+- Secret de GitHub Actions `NUGET_USER` con tu nombre de perfil de nuget.org (no tu email).
+- Un tag que coincida con la versión del paquete:
+
+```powershell
+git tag v0.1.0-beta
+git push origin v0.1.0-beta
+```
+
+Si prefieres publicar manualmente, genera una API key con scope **Push** y ejecuta `dotnet nuget push`.
+
 ## Instalación en clientes MCP
 
 Si el paquete aún no está publicado, usa `dotnet run --project ... -- --mode stdio` o añade `--add-source` con la ruta a `SqlServerMCP\bin\Release` en la configuración de `dnx`.
