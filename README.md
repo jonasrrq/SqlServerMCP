@@ -1,3 +1,4 @@
+<!-- mcp-name: io.github.jonasrrq/SqlServerMCP -->
 # Database MCP Server on .NET 11 (SQL Server engine)
 
 Servidor MCP en C# para consultar metadatos y ejecutar consultas. Hoy implementa SQL Server; el paquete `JR.DatabaseMCP` usa un nombre genérico para incorporar otros motores más adelante.

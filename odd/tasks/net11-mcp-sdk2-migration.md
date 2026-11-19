@@ -308,6 +308,8 @@ SQL login.
       `tools.json`; tool names match `tools/list` (7/7).
 - [x] Added `MCP_DB_PROVIDER` / `--db-provider` with default `sqlserver`, fail-fast
       validation for unsupported engines, startup logging, and tests.
+- [x] Completed NuGet metadata (author, MIT license, repository/project URL) and added the
+      `mcp-name` marker required by the MCP Registry.
 - [x] Build 0 errors, tests 60/60 after the changes.
 
 ## Execution notes
