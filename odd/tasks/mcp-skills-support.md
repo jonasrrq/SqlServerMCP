@@ -163,8 +163,15 @@ External dirs ─────┘                                  ├─> resour
 
 - Route: delegated/direct hybrid with the parent as sole writer; tests and protocol smoke run as
   bounded actions after each work unit. No SDD state was created.
-- Work-unit commits: recorded in the feature branch history (`git log --oneline`).
-- Final state: feature complete, docs updated, Docker verified; not pushed and no PR created.
+- Work-unit commits: five commits on `feat/mcp-skills-support` (`5ab3ce3`, `19f018f`,
+  `6fcffff`, `b9a2c1c`, `b5c6cdf`), plus this record update.
+- Delivery: branch pushed; PR #3 opened and mergeable
+  (https://github.com/jonasrrq/SqlServerMCP/pull/3).
+- Release: tag `v0.2.0-beta` pushed from `b5c6cdf`; the Publish NuGet workflow succeeded;
+  `JonasRq.DatabaseMCP 0.2.0-beta` is live on NuGet; GitHub Release
+  `v0.2.0-beta` carries the `.nupkg` and `SqlServerMCP-skill.zip`.
+- Final state: feature complete and published as a prerelease. Merging PR #3 remains a
+  maintainer decision; no further publish is needed after merge.
 
 ## Mirror status
 
