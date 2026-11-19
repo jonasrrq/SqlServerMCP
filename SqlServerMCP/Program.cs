@@ -1,9 +1,11 @@
 ﻿using Microsoft.Data.SqlClient;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Server;
+using SqlServerMCP.Skills;
 using System.Text;
 
 namespace SqlServerMCP;
@@ -82,6 +84,8 @@ public class Program
         if (isHttpMode)
         {
             var builder = Microsoft.AspNetCore.Builder.WebApplication.CreateBuilder(args);
+            AddSkillConfiguration(builder.Configuration);
+            var skillRuntime = await ConfigureSkillsAsync(builder.Configuration, builder.Services);
             var httpAuthOptions = HttpAuthOptions.FromEnvironment();
             httpAuthOptions.Validate();
 
@@ -96,13 +100,18 @@ public class Program
             builder.Services.AddSingleton<IMetadataProvider>(_ =>
                 new SqlServerMetadataProvider(() => new SqlConnection(connectionString), defaultTimeout, defaultMaxRows, metadataCacheTtl));
 
-            builder.Services.AddMcpServer()
+            var mcpBuilder = builder.Services.AddMcpServer()
                 .WithHttpTransport(options =>
                 {
                     // Streamable HTTP stateless por defecto.
                     options.Stateless = true;
                 })
                 .WithToolsFromAssembly();
+
+            if (skillRuntime.Registry is not null)
+            {
+                mcpBuilder.WithSkillDistribution(skillRuntime.Registry, skillRuntime.Options);
+            }
             var hostGuardOptions = HttpHostGuardOptions.FromEnvironment();
             // validate early to fail fast when enabled but misconfigured
             hostGuardOptions.Validate();
@@ -129,6 +138,8 @@ public class Program
         else // stdio por defecto
         {
             var builder = Host.CreateApplicationBuilder(args);
+            AddSkillConfiguration(builder.Configuration);
+            var skillRuntime = await ConfigureSkillsAsync(builder.Configuration, builder.Services);
 
             // stdio usa stdout para el protocolo MCP: todos los logs van a stderr.
             builder.Logging.AddConsole(o => o.LogToStandardErrorThreshold = LogLevel.Trace);
@@ -141,9 +152,14 @@ public class Program
             builder.Services.AddSingleton<IMetadataProvider>(_ =>
                 new SqlServerMetadataProvider(() => new SqlConnection(connectionString), defaultTimeout, defaultMaxRows, metadataCacheTtl));
 
-            builder.Services.AddMcpServer()
+            var mcpBuilder = builder.Services.AddMcpServer()
                 .WithStdioServerTransport()
                 .WithToolsFromAssembly();
+
+            if (skillRuntime.Registry is not null)
+            {
+                mcpBuilder.WithSkillDistribution(skillRuntime.Registry, skillRuntime.Options);
+            }
 
             var host = builder.Build();
             host.Services.GetRequiredService<ILoggerFactory>()
@@ -152,6 +168,38 @@ public class Program
             ServiceProviderAccessor.Current = host.Services;
             await host.RunAsync();
         }
+    }
+
+    private static void AddSkillConfiguration(IConfigurationBuilder configuration)
+    {
+        configuration.AddJsonFile(
+            Path.Combine(AppContext.BaseDirectory, "appsettings.json"),
+            optional: true,
+            reloadOnChange: false);
+    }
+
+    private static async Task<(SkillOptions Options, SkillRegistry? Registry)> ConfigureSkillsAsync(
+        IConfiguration configuration,
+        IServiceCollection services)
+    {
+        var options = SkillOptions.FromConfiguration(configuration);
+        if (!options.Enabled)
+        {
+            return (options, null);
+        }
+
+        var registry = await SkillRegistry.CreateAsync(
+            options,
+            message => Console.Error.WriteLine($"[skills] {message}"));
+
+        services.AddSingleton(options);
+        services.AddSingleton(registry);
+        if (options.ReloadOnChange)
+        {
+            services.AddHostedService<SkillReloadService>();
+        }
+
+        return (options, registry);
     }
 
     private static string? GetArgValue(string[] args, string key)

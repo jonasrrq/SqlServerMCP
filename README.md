@@ -9,6 +9,7 @@ Servidor MCP en C# para consultar metadatos y ejecutar consultas. Hoy implementa
 
 - **Framework**: `net11.0`
 - **Motor actual**: SQL Server (`MCP_DB_PROVIDER=sqlserver`)
+- **Skills**: extensión `io.modelcontextprotocol/skills` (SEP-2640)
 - **Gestión de paquetes**: centralizada con `Directory.Packages.props`
 - **Transporte MCP**:
   - `stdio` (integración local con editores/agentes)
@@ -102,7 +103,7 @@ El servidor se empaqueta como MCP server (`PackageType=McpServer`) con manifiest
 dotnet pack SqlServerMCP/SqlServerMCP.csproj -c Release
 ```
 
-El paquete `JonasRq.DatabaseMCP` está publicado en NuGet: https://www.nuget.org/packages/JonasRq.DatabaseMCP (`0.1.0-beta`). Declara `--mode stdio` y los inputs `SQLSERVER_*` para clientes MCP. El nombre es genérico para futuros motores; el binario actual implementa SQL Server.
+El paquete `JonasRq.DatabaseMCP` está publicado en NuGet: https://www.nuget.org/packages/JonasRq.DatabaseMCP (`0.2.0-beta`). Declara `--mode stdio` y los inputs `SQLSERVER_*` para clientes MCP. El nombre es genérico para futuros motores; el binario actual implementa SQL Server.
 
 ### Publicación automatizada (Trusted Publishing)
 
@@ -114,8 +115,8 @@ Requisitos:
 - Un tag que coincida con la versión del paquete:
 
 ```powershell
-git tag v0.1.0-beta
-git push origin v0.1.0-beta
+git tag v0.2.0-beta
+git push origin v0.2.0-beta
 ```
 
 Si prefieres publicar manualmente, genera una API key con scope **Push** y ejecuta `dotnet nuget push`.
@@ -134,7 +135,7 @@ Edita `%APPDATA%\Claude\claude_desktop_config.json` y añade:
     "SqlServerMCP": {
       "command": "dnx",
       "args": [
-        "JonasRq.DatabaseMCP@0.1.0-beta",
+        "JonasRq.DatabaseMCP@0.2.0-beta",
         "--",
         "--mode", "stdio"
       ],
@@ -154,7 +155,7 @@ Reinicia Claude Desktop y revisa **Settings → Developer** y los logs en `%APPD
 ```powershell
 claude mcp add --env 'SQLSERVER_CONNECTION_STRING=Server=localhost;Database=Editoriales_Net;User Id=sa;Password=TU_CLAVE;Encrypt=Mandatory;TrustServerCertificate=True;' `
   --transport stdio SqlServerMCP `
-  -- dnx JonasRq.DatabaseMCP@0.1.0-beta -- --mode stdio
+  -- dnx JonasRq.DatabaseMCP@0.2.0-beta -- --mode stdio
 
 claude mcp list
 ```
@@ -167,7 +168,7 @@ También puedes declararlo en `.mcp.json` en la raíz del proyecto:
     "SqlServerMCP": {
       "type": "stdio",
       "command": "dnx",
-      "args": ["JonasRq.DatabaseMCP@0.1.0-beta", "--", "--mode", "stdio"],
+      "args": ["JonasRq.DatabaseMCP@0.2.0-beta", "--", "--mode", "stdio"],
       "env": {
         "MCP_DB_PROVIDER": "sqlserver",
         "SQLSERVER_CONNECTION_STRING": "Server=localhost;Database=Editoriales_Net;User Id=sa;Password=TU_CLAVE;Encrypt=Mandatory;TrustServerCertificate=True;"
@@ -207,7 +208,7 @@ Formato para VS Code / Visual Studio:
     "SqlServerMCP": {
       "type": "stdio",
       "command": "dnx",
-      "args": ["JonasRq.DatabaseMCP@0.1.0-beta", "--", "--mode", "stdio"],
+      "args": ["JonasRq.DatabaseMCP@0.2.0-beta", "--", "--mode", "stdio"],
       "env": {
         "MCP_DB_PROVIDER": "sqlserver",
         "SQLSERVER_CONNECTION_STRING": "Server=localhost;Database=Editoriales_Net;User Id=sa;Password=TU_CLAVE;Encrypt=Mandatory;TrustServerCertificate=True;"
@@ -348,6 +349,27 @@ Los nombres MCP son snake_case; entre paréntesis, el método C#:
 - `get_metadata_cache_status` (`GetMetadataCacheStatus`): claves/expiración.
 - `get_audit_entries` (`GetAuditEntries`): auditoría en memoria.
 
+## Skills MCP
+
+El servidor distribuye **Agent Skills** con la extensión oficial
+`io.modelcontextprotocol/skills` (SEP-2640). La skill incluida se descubre en
+`skill://sqlservermcp/SKILL.md`.
+
+- Métodos: `skills/list`, `skills/get` y `resources/read`.
+- Fuentes: `SqlServerMCP/Skills`, directorios externos y recursos embebidos.
+- Configuración: sección `Skills` de `appsettings.json` o variables `MCP_SKILLS_*`.
+- Recarga de directorios externos sin reiniciar (`ReloadOnChange`).
+- `resources/directory/read` no está implementado por el SDK 2.4.0; el servidor no lo declara.
+
+Ejemplo de descubrimiento:
+
+```json
+{ "jsonrpc": "2.0", "id": 1, "method": "skills/list", "params": {} }
+```
+
+Guía completa, estructura de `SKILL.md`, configuración y seguridad:
+[docs/skills.md](docs/skills.md).
+
 ## Uso desde cliente
 
 Recomendado: usa el SDK oficial de MCP o el MCP Inspector. El servidor expone Streamable HTTP en la URL base (por defecto `http://localhost:5000`).
@@ -453,6 +475,9 @@ La auditoría registra intentos y resultados de ejecución de consultas con sani
 - `SQLSERVER_TRUST_SERVER_CERTIFICATE`
 - `SQLSERVER_CONNECT_TIMEOUT`
 - `MCP_DB_PROVIDER`
+- `MCP_SKILLS_ENABLED`
+- `MCP_SKILLS_EXTERNAL_DIRECTORIES`
+- `MCP_SKILLS_RELOAD_ON_CHANGE`
 - `MCP_MODE`
 - `MCP_HTTP_URL`
 - `MCP_HTTP_AUTH_ENABLED`

@@ -1,0 +1,9 @@
+.git
+.env
+**/bin
+**/obj
+dist
+.agents
+.specify
+openspec
+odd
