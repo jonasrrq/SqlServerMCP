@@ -152,10 +152,12 @@ Acceptance: tool payloads are understood, tested, and documented.
       VS 2026 Copilot manual verification remains a follow-up.
 - [x] Start HTTP mode on `http://localhost:5199` and connect with the same client.
 - [x] Verify `tools/list` contains `get_metadata` and `execute_query` (7 tools total).
-- [ ] Invoke `get_metadata` against the configured SQL Server. Blocked: no SQL Server is
-      listening on localhost:1433. The tool call completed with the safe error payload
-      (`MCP-METADATA-001`), which exercises the tool path without a database.
-- [x] Verify `execute_query` path via the unit tests and the writer's stdio probe.
+- [x] Invoke `get_metadata` against the configured SQL Server (`Editoriales_Net`):
+      91 tables, 20 views, 573 procedures, 89 foreign keys.
+- [x] Invoke `execute_query` with pagination: page 1 and page 2 over `sys.tables`;
+      91 total available, 5 returned per page.
+- [x] Verify `get_columns`, cache status/clear, `sp_helpdb`, and audit entries.
+- [x] Verify a destructive query (`DELETE`) is blocked with `MCP-QUERY-001`.
 - [x] Verify discovery-first: `tools/list` is served without a prior `initialize`;
       `server/discover` requires per-request protocol-version metadata as defined by the
       2026-07-28 specification.
@@ -250,12 +252,33 @@ Record command output summaries and payload samples here as tasks complete.
 | T3 | build after 2.4.0 upgrade | 0 errors, 2 `NU1507` warnings, 0 `MCP90xx` | 2026-11-19 |
 | T4 | stdout/stderr separation check | stdout only JSON-RPC; logs on stderr | 2026-11-19 |
 | T5 | tool payload samples | text-only JSON blocks; `structuredContent=null`, no `outputSchema`; 2 regression tests added | 2026-11-19 |
-| T6 | client name/version + results | raw JSON-RPC smoke; stdio + HTTP; 7 tools; discovery-first confirmed | 2026-11-19 |
+| T6 | client name/version + results | raw JSON-RPC + real DB `Editoriales_Net`; stdio + HTTP; 7 tools; 91 tables / 20 views / 573 procs / 89 FKs; `DELETE` blocked | 2026-11-19 |
 | T7 | packaging decision / `dotnet pack` | adopted; `Jonas.SqlServerMCP.0.1.0-beta.nupkg` with `.mcp/server.json` + README | 2026-11-19 |
 | T8 | runtime async keep/revert | build 0 errors, 52/52 tests; reverted (no measurable benefit) | 2026-11-19 |
 | T9 | AOT pass/fail | publish OK; AOT runtime `tools/list` fails (-32601, trimmed `WithToolsFromAssembly`); not adopted | 2026-11-19 |
 | T10 | docs updated | README, `.env-example`, constitution aligned | 2026-11-19 |
 | T11 | final clean build + test + smoke | 0 errors, 52/52 tests, stdio + HTTP OK; commits `cfb990a`, `91734ed` | 2026-11-19 |
+
+### Real SQL Server validation (2026-11-19)
+
+Environment: SQL Server 2022 in Docker, database `Editoriales_Net`, credentials supplied
+through a gitignored `.env` (never printed). Both transports were exercised with a raw
+JSON-RPC client against the same database.
+
+| Check | stdio | HTTP |
+|---|---|---|
+| `initialize` | OK (`2025-11-25`) | OK (`2025-11-25`) |
+| `tools/list` | 7 tools | 7 tools |
+| `get_metadata` | 91 tables / 20 views / 573 procedures / 89 FKs | same |
+| `get_columns` (`dbo.ConveniosItem`) | 8 columns | 8 columns |
+| Cache | 5 entries -> cleared -> 0 | same |
+| Pagination page 1 / page 2 | 5 / 5 rows, 91 total | same |
+| `sp_helpdb` | 11 rows | 11 rows |
+| Audit entries | 2 | 2 |
+| Destructive query `DELETE` | blocked, `MCP-QUERY-001` | blocked, `MCP-QUERY-001` |
+
+Note: `sa` was used only for local validation. Production should use a least-privilege
+SQL login.
 
 ## Risks and mitigations
 
