@@ -5,7 +5,7 @@ shell commands, and other important information, read the current plan
 
 # SqlServerMCP — Agent Instructions
 
-Servidor MCP en **.NET 10 / C#** que expone herramientas para consultar metadatos y ejecutar consultas en SQL Server mediante los transportes `stdio` y Streamable HTTP.
+Servidor MCP en **.NET 11 / C#** que expone herramientas para consultar metadatos y ejecutar consultas en SQL Server mediante los transportes `stdio` y Streamable HTTP.
 
 ## Build & Test
 
@@ -15,7 +15,7 @@ dotnet build SqlServerMCP.sln -c Debug
 dotnet test SqlServerMCP.sln -c Debug --no-build
 ```
 
-- Framework objetivo: `net10.0`
+- Framework objetivo: `net11.0`
 - Versiones NuGet gestionadas de forma centralizada en [Directory.Packages.props](../Directory.Packages.props) — **nunca añadas `Version=` en el `.csproj`**
 
 ## Architecture

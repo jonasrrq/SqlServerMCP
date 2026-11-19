@@ -1,10 +1,10 @@
-# MCP Server on .NET 10 for SQL Server
+# MCP Server on .NET 11 for SQL Server
 
 Servidor MCP en C# que expone herramientas para consultar metadatos y ejecutar consultas en SQL Server.
 
 ## Estado actual del proyecto
 
-- **Framework**: `net10.0`
+- **Framework**: `net11.0`
 - **Gestión de paquetes**: centralizada con `Directory.Packages.props`
 - **Transporte MCP**:
   - `stdio` (integración local con editores/agentes)
@@ -16,10 +16,10 @@ Las versiones se administran de forma central en `Directory.Packages.props`.
 
 ### Runtime
 
-- `Microsoft.Data.SqlClient` `7.0.1`
-- `Microsoft.Extensions.Hosting` `10.0.8`
-- `ModelContextProtocol` `1.3.0`
-- `ModelContextProtocol.AspNetCore` `1.3.0`
+- `Microsoft.Data.SqlClient` `7.1.2`
+- `Microsoft.Extensions.Hosting` `11.0.0`
+- `ModelContextProtocol` `2.4.0`
+- `ModelContextProtocol.AspNetCore` `2.4.0`
 
 ### Testing
 
@@ -29,12 +29,22 @@ Las versiones se administran de forma central en `Directory.Packages.props`.
 - `FluentAssertions` `8.10.0`
 - `Moq` `4.20.72`
 - `coverlet.collector` `10.0.1`
-- `Microsoft.Data.Sqlite` `10.0.8`
+- `Microsoft.Data.Sqlite` `11.0.0`
 
 ## Prerrequisitos
 
-- SDK de **.NET 10** instalado
+- SDK de **.NET 11** instalado
 - Acceso a una instancia de SQL Server
+
+## Migración a .NET 11 y MCP SDK 2.4
+
+- MCP SDK 2.4 implementa la especificación `2026-07-28` con negociación discovery-first y fallback a `initialize` para clientes anteriores.
+- HTTP sigue en modo **stateless** (`options.Stateless = true`).
+- El **SSE legado fue retirado**: `MCP_ENABLE_LEGACY_SSE` ya no tiene efecto. `MCP_MODE=sse` se acepta como alias de `http`.
+- En `stdio`, todos los logs se escriben en **stderr**; stdout queda reservado para el protocolo.
+- Las tools devuelven un bloque de texto JSON (sin `structuredContent` ni `outputSchema`), porque `UseStructuredContent` sigue desactivado.
+- El paquete NuGet `Jonas.SqlServerMCP` incluye `.mcp/server.json` y declara `--mode stdio` para clientes MCP.
+- Native AOT compila, pero `tools/list` no está disponible con `WithToolsFromAssembly`; requiere registro genérico y JSON source-generation antes de soportarlo.
 
 ## Configuración local
 
@@ -69,6 +79,16 @@ dotnet build SqlServerMCP.sln -c Debug
 dotnet test SqlServerMCP.sln -c Debug --no-build
 ```
 
+## Paquete NuGet (MCP)
+
+El servidor se empaqueta como MCP server (`PackageType=McpServer`) con manifiesto `.mcp/server.json`:
+
+```powershell
+dotnet pack SqlServerMCP/SqlServerMCP.csproj -c Release
+```
+
+El paquete `Jonas.SqlServerMCP` declara `--mode stdio` y los inputs `SQLSERVER_*` para clientes MCP. La publicación en NuGet.org queda como decisión de release.
+
 ## Ejecución
 
 > Seguridad: este proyecto **ya no lee `--password`** desde argumentos CLI para evitar exposición en historial de shell/procesos.
@@ -98,10 +118,10 @@ dotnet run --project ./SqlServerMCP/SqlServerMCP.csproj -- `
 
 El servidor arranca en `http://localhost:5000`.
 
-> Nota importante (MCP SDK 1.3):
+> Nota importante (MCP SDK 2.4):
 >
 > El transporte recomendado es **Streamable HTTP** (`app.MapMcp()`, URL base `http://localhost:5000`) y se ejecuta en modo **stateless** por defecto.
-> SSE legado (`/sse` + `/message`) queda deshabilitado por defecto y se habilita solo con `MCP_ENABLE_LEGACY_SSE=true`.
+> El **SSE legado fue retirado**; `MCP_ENABLE_LEGACY_SSE` ya no tiene efecto y `MCP_MODE=sse` se acepta solo como alias de `http`.
 
 ### 3) HTTP con autenticación opcional
 
@@ -127,17 +147,13 @@ $env:MCP_AUTH_HEADER_NAME = "X-MCP-Auth"
 dotnet run --project ./SqlServerMCP/SqlServerMCP.csproj -- --mode http
 ```
 
-## MCP Inspector (evitar error 400)
+## MCP Inspector
 
-Si en Inspector eliges **Transport Type = SSE**, usa:
-
-- **Server URL**: `http://localhost:5000/sse`
-
-Si eliges modo HTTP/Streamable, usa:
+Usa **Transport Type = Streamable HTTP** con:
 
 - **Server URL**: `http://localhost:5000`
 
-`http://localhost:5000` con tipo **SSE** suele fallar porque SSE legado espera la ruta `/sse`.
+El SSE legado ya no está disponible; no uses la ruta `/sse`.
 
 ## Integración con VS Code / Cursor (mcp.json)
 
@@ -216,7 +232,6 @@ Recomendado: usa el SDK oficial (TypeScript o Python) o el MCP Inspector. El ser
 - Autenticación HTTP (opcional): envía el token configurado en `MCP_AUTH_TOKEN` como `Authorization: Bearer <token>` o en el header `X-MCP-Auth` (configurable con `MCP_AUTH_HEADER_NAME`).
 - Endpoints importantes:
   - Streamable HTTP: POST `http://localhost:5000/` (transport layer manejado por el SDK/inspector).
-  - SSE legado (solo si `MCP_ENABLE_LEGACY_SSE=true`): base `http://localhost:5000/sse`.
 
 Ejemplo rápido (usar SDK cuando sea posible):
 
@@ -349,7 +364,6 @@ La auditoría registra intentos y resultados de ejecución de consultas con sani
 - `SQLSERVER_TRUST_SERVER_CERTIFICATE`
 - `SQLSERVER_CONNECT_TIMEOUT`
 - `MCP_MODE`
-- `MCP_ENABLE_LEGACY_SSE`
 - `MCP_HTTP_URL`
 - `MCP_HTTP_AUTH_ENABLED`
 - `MCP_AUTH_TOKEN`

@@ -34,8 +34,8 @@ Cualquier cambio incompatible en nombre, parámetros o forma de respuesta de est
 (a) incremento de versión semántica MAJOR, (b) documentación de migración en la PR y
 (c) aprobación explícita en revisión. Los parámetros sensibles (credenciales, tokens) NUNCA
 forman parte del contrato público de las herramientas. El stack tecnológico canónico es
-.NET 10 (`net10.0`), `ModelContextProtocol` v1.3.0 y `ModelContextProtocol.AspNetCore` v1.3.0
-con `Microsoft.Data.SqlClient` v7.0.1.
+.NET 11 (`net11.0`), `ModelContextProtocol` v2.4.0 y `ModelContextProtocol.AspNetCore` v2.4.0
+con `Microsoft.Data.SqlClient` v7.1.2.
 
 ### II. Seguridad y manejo de secretos (MANDATORY)
 
@@ -86,16 +86,16 @@ DEBE justificarse explícitamente en la PR.
 
 ## Stack tecnológico y configuración de entorno
 
-**Runtime**: .NET 10 (`net10.0`), C# con nullable habilitado, implicit usings.
+**Runtime**: .NET 11 (`net11.0`), C# con nullable habilitado, implicit usings.
 
-**Dependencias runtime**: `Microsoft.Data.SqlClient` 7.0.1 · `Microsoft.Extensions.Hosting` 10.0.8 ·
-`ModelContextProtocol` 1.3.0 · `ModelContextProtocol.AspNetCore` 1.3.0.
+**Dependencias runtime**: `Microsoft.Data.SqlClient` 7.1.2 · `Microsoft.Extensions.Hosting` 11.0.0 ·
+`ModelContextProtocol` 2.4.0 · `ModelContextProtocol.AspNetCore` 2.4.0.
 
 **Dependencias de test**: xunit 2.9.3 · FluentAssertions 8.10.0 · Moq 4.20.72 ·
-coverlet.collector 10.0.1 · Microsoft.Data.Sqlite 10.0.8.
+coverlet.collector 10.0.1 · Microsoft.Data.Sqlite 11.0.0.
 
 **Transportes soportados**: Streamable HTTP stateless (producción) y `stdio` (integración local).
-SSE legado disponible con `MCP_ENABLE_LEGACY_SSE=true` (require modo stateful).
+El SSE legado fue retirado con la migración a MCP SDK 2.4; `MCP_MODE=sse` es solo un alias de `http`.
 
 **Variables de entorno clave** (documentadas en `README.md` y `.env-example`):
 
