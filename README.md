@@ -1,6 +1,8 @@
 <!-- mcp-name: io.github.jonasrrq/SqlServerMCP -->
 # Database MCP Server on .NET 11 (SQL Server engine)
 
+[![NuGet](https://img.shields.io/nuget/vpre/JonasRq.DatabaseMCP.svg)](https://www.nuget.org/packages/JonasRq.DatabaseMCP)
+
 Servidor MCP en C# para consultar metadatos y ejecutar consultas. Hoy implementa SQL Server; el paquete `JonasRq.DatabaseMCP` usa un nombre genérico para incorporar otros motores más adelante.
 
 ## Estado actual del proyecto
@@ -100,7 +102,7 @@ El servidor se empaqueta como MCP server (`PackageType=McpServer`) con manifiest
 dotnet pack SqlServerMCP/SqlServerMCP.csproj -c Release
 ```
 
-El paquete `JonasRq.DatabaseMCP` declara `--mode stdio` y los inputs `SQLSERVER_*` para clientes MCP. El nombre es genérico para futuros motores; el binario actual implementa SQL Server. La publicación en NuGet.org queda como decisión de release.
+El paquete `JonasRq.DatabaseMCP` está publicado en NuGet: https://www.nuget.org/packages/JonasRq.DatabaseMCP (`0.1.0-beta`). Declara `--mode stdio` y los inputs `SQLSERVER_*` para clientes MCP. El nombre es genérico para futuros motores; el binario actual implementa SQL Server.
 
 ### Publicación automatizada (Trusted Publishing)
 

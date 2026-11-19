@@ -314,6 +314,8 @@ SQL login.
       (`.github/workflows/publish-nuget.yml`, OIDC, tag `v*`).
 - [x] Made the real SQL Server integration test opt-in via
       `SQLSERVER_TEST_CONNECTION_STRING` so CI can run without a database.
+- [x] Published `JonasRq.DatabaseMCP` `0.1.0-beta` via Trusted Publishing; NuGet indexed
+      it and the published `dnx` command returned `initialize` plus the 7 tools.
 - [x] Build 0 errors, tests 60/60 after the changes.
 
 ## Execution notes
