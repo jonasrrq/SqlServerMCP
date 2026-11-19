@@ -169,12 +169,12 @@ Acceptance: both transports work end-to-end; no client-side errors.
 ### T7 - Packaging and publish decision gate
 
 Decision: **adopt NuGet MCP packaging metadata** (template characteristic). Package ID
-`JR.DatabaseMCP` is available on NuGet.org. It was renamed from `Jonas.SqlServerMCP` ->
-`JR.SqlServerMCP` -> `JR.DatabaseMCP` to leave room for future database engines;
-`SqlServerMCP` is already taken.
+`JonasRq.DatabaseMCP` is available on NuGet.org. The naming evolved:
+`Jonas.SqlServerMCP` -> `JR.SqlServerMCP` -> `JR.DatabaseMCP` (rejected: NuGet reserved
+the `JR` prefix) -> `JonasRq.DatabaseMCP`. `SqlServerMCP` is already taken.
 
 - [x] If **yes**:
-  - [x] Rename the package to `JR.DatabaseMCP` in the project and `.mcp/server.json`.
+  - [x] Rename the package to `JonasRq.DatabaseMCP` in the project and `.mcp/server.json`.
   - [x] Add `PackAsTool`, `PackageType=McpServer`, `PackageReadmeFile`, `PackageId`,
         `PackageVersion`, `PackageTags`, and `Description`.
   - [x] Add `.mcp/server.json` with the NuGet registry package, `--mode stdio` package
@@ -256,7 +256,7 @@ Record command output summaries and payload samples here as tasks complete.
 | T4 | stdout/stderr separation check | stdout only JSON-RPC; logs on stderr | 2026-11-19 |
 | T5 | tool payload samples | text-only JSON blocks; `structuredContent=null`, no `outputSchema`; 2 regression tests added | 2026-11-19 |
 | T6 | client name/version + results | raw JSON-RPC + real DB `Editoriales_Net`; stdio + HTTP; 7 tools; 91 tables / 20 views / 573 procs / 89 FKs; `DELETE` blocked | 2026-11-19 |
-| T7 | packaging decision / `dotnet pack` | adopted; `JR.DatabaseMCP.0.1.0-beta.nupkg` with `.mcp/server.json` + README | 2026-11-19 |
+| T7 | packaging decision / `dotnet pack` | adopted; `JonasRq.DatabaseMCP.0.1.0-beta.nupkg` with `.mcp/server.json` + README | 2026-11-19 |
 | T8 | runtime async keep/revert | build 0 errors, 52/52 tests; reverted (no measurable benefit) | 2026-11-19 |
 | T9 | AOT pass/fail | publish OK; AOT runtime `tools/list` fails (-32601, trimmed `WithToolsFromAssembly`); not adopted | 2026-11-19 |
 | T10 | docs updated | README, `.env-example`, constitution aligned | 2026-11-19 |
@@ -297,8 +297,8 @@ SQL login.
 
 ## Follow-up (2026-11-19): package rename, client docs, skill audit
 
-- [x] Renamed the NuGet package to `JR.DatabaseMCP` and repacked
-      `JR.DatabaseMCP.0.1.0-beta.nupkg`.
+- [x] Renamed the NuGet package to `JonasRq.DatabaseMCP` and repacked
+      `JonasRq.DatabaseMCP.0.1.0-beta.nupkg`.
 - [x] README documents Claude Desktop (stdio), Claude Code (stdio), ChatGPT desktop
       (remote HTTP only), VS Code, Visual Studio 2026, and Cursor.
 - [x] Skill rewritten with valid YAML frontmatter, real MCP tool names/arguments, and
