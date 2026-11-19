@@ -39,7 +39,7 @@ Client → Transport (HTTP/stdio) → MetadataTool → IMetadataProvider → Sql
 
 ## MCP Tools expuestas (7)
 
-`GetMetadata` · `GetColumns` · `ExecuteQuery` · `ExecuteStoredProcedure` · `ClearMetadataCache` · `GetMetadataCacheStatus` · `GetAuditEntries`
+`get_metadata` · `get_columns` · `execute_query` · `execute_stored_procedure` · `clear_metadata_cache` · `get_metadata_cache_status` · `get_audit_entries`
 
 Todas retornan `object` con forma de éxito `{ result, ... }` o error `{ error: true, errorCode: "MCP-XXX-###", correlationId, message }`.
 

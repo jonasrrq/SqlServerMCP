@@ -169,9 +169,11 @@ Acceptance: both transports work end-to-end; no client-side errors.
 ### T7 - Packaging and publish decision gate
 
 Decision: **adopt NuGet MCP packaging metadata** (template characteristic). Package ID
-`Jonas.SqlServerMCP` is available on NuGet.org; `SqlServerMCP` is already taken.
+`JR.SqlServerMCP` is available on NuGet.org. It was renamed from `Jonas.SqlServerMCP` at
+the user's request; `SqlServerMCP` is already taken.
 
 - [x] If **yes**:
+  - [x] Rename the package to `JR.SqlServerMCP` in the project and `.mcp/server.json`.
   - [x] Add `PackAsTool`, `PackageType=McpServer`, `PackageReadmeFile`, `PackageId`,
         `PackageVersion`, `PackageTags`, and `Description`.
   - [x] Add `.mcp/server.json` with the NuGet registry package, `--mode stdio` package
@@ -253,7 +255,7 @@ Record command output summaries and payload samples here as tasks complete.
 | T4 | stdout/stderr separation check | stdout only JSON-RPC; logs on stderr | 2026-11-19 |
 | T5 | tool payload samples | text-only JSON blocks; `structuredContent=null`, no `outputSchema`; 2 regression tests added | 2026-11-19 |
 | T6 | client name/version + results | raw JSON-RPC + real DB `Editoriales_Net`; stdio + HTTP; 7 tools; 91 tables / 20 views / 573 procs / 89 FKs; `DELETE` blocked | 2026-11-19 |
-| T7 | packaging decision / `dotnet pack` | adopted; `Jonas.SqlServerMCP.0.1.0-beta.nupkg` with `.mcp/server.json` + README | 2026-11-19 |
+| T7 | packaging decision / `dotnet pack` | adopted; `JR.SqlServerMCP.0.1.0-beta.nupkg` with `.mcp/server.json` + README | 2026-11-19 |
 | T8 | runtime async keep/revert | build 0 errors, 52/52 tests; reverted (no measurable benefit) | 2026-11-19 |
 | T9 | AOT pass/fail | publish OK; AOT runtime `tools/list` fails (-32601, trimmed `WithToolsFromAssembly`); not adopted | 2026-11-19 |
 | T10 | docs updated | README, `.env-example`, constitution aligned | 2026-11-19 |
@@ -291,6 +293,19 @@ SQL login.
 | .NET 11 hardware baseline excludes old hosts | High | Inventory deployment CPUs; `x86-64-v2` is required, Windows Arm64 needs `LSE` |
 | Native AOT fails with SqlClient/JSON | Low | Timeboxed spike; do not block the migration |
 | Package version conflicts under CPM | Low | Centralized versions; restore output is the evidence |
+
+## Follow-up (2026-11-19): package rename, client docs, skill audit
+
+- [x] Renamed the NuGet package to `JR.SqlServerMCP` and repacked
+      `JR.SqlServerMCP.0.1.0-beta.nupkg`.
+- [x] README documents Claude Desktop (stdio), Claude Code (stdio), ChatGPT desktop
+      (remote HTTP only), VS Code, Visual Studio 2026, and Cursor.
+- [x] Skill rewritten with valid YAML frontmatter, real MCP tool names/arguments, and
+      machine-readable `tools.json`.
+- [x] `make-release.ps1` validates `SKILL.md` and `tools.json` before packaging.
+- [x] Distribution validated: `dist/SqlServerMCP-skill.zip` contains `SKILL.md` and
+      `tools.json`; tool names match `tools/list` (7/7).
+- [x] Build 0 errors, tests 52/52 after the changes.
 
 ## Execution notes
 

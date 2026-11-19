@@ -1,75 +1,209 @@
 {
+  "server": "SqlServerMCP",
+  "transports": ["stdio", "streamable-http"],
+  "definitions": {
+    "pagination": {
+      "type": "object",
+      "properties": {
+        "page": { "type": "integer", "minimum": 1 },
+        "pageSize": { "type": "integer", "minimum": 1, "maximum": 10000 },
+        "totalAvailable": { "type": "integer", "minimum": 0 },
+        "returned": { "type": "integer", "minimum": 0 }
+      },
+      "required": ["page", "pageSize", "totalAvailable", "returned"]
+    },
+    "row": {
+      "type": "object",
+      "additionalProperties": true
+    }
+  },
   "tools": [
     {
-      "name": "ExecuteQuery",
-      "description": "Ejecuta consultas SQL de solo lectura (SELECT / WITH).",
-      "parameters": {
+      "name": "get_metadata",
+      "description": "Devuelve tablas, vistas, procedimientos y llaves foráneas de la base configurada.",
+      "inputSchema": {
         "type": "object",
-        "properties": {
-          "query": { "type": "string" },
-          "maxRows": { "type": "integer" },
-          "timeoutSeconds": { "type": "integer" }
-        },
-        "required": ["query"]
+        "properties": {},
+        "additionalProperties": false
       },
-      "output": {
+      "outputSchema": {
         "type": "object",
         "properties": {
-          "rows": {
+          "tables": { "type": "array", "items": { "type": "string" } },
+          "views": { "type": "array", "items": { "type": "string" } },
+          "procedures": { "type": "array", "items": { "type": "string" } },
+          "foreignKeys": {
             "type": "array",
             "items": {
               "type": "object",
               "properties": {
-                "columns": { "type": "array", "items": { "type": "string" } },
-                "values": { "type": "array", "items": { "type": "array" } }
-              }
+                "table": { "type": "string" },
+                "foreignKey": { "type": "string" },
+                "referencedTable": { "type": "string" },
+                "column": { "type": "string" },
+                "referencedColumn": { "type": "string" }
+              },
+              "required": ["table", "foreignKey", "referencedTable", "column", "referencedColumn"]
             }
           },
-          "rowCount": { "type": "integer" }
-        }
+          "structured": {
+            "type": "object",
+            "description": "El mismo metadata agrupado como MetadataResult."
+          }
+        },
+        "required": ["tables", "views", "procedures", "foreignKeys", "structured"]
       }
     },
     {
-      "name": "GetMetadata",
-      "description": "Lista tablas, vistas y procedimientos.",
-      "parameters": { "type": "object", "properties": { "filter": { "type": "string" } } },
-      "output": {
+      "name": "execute_query",
+      "description": "Ejecuta una consulta de solo lectura (SELECT/CTE) con límites, timeout y paginación.",
+      "inputSchema": {
         "type": "object",
         "properties": {
-          "tables": { "type": "array", "items": { "type": "object", "properties": { "name": { "type": "string" }, "schema": { "type": "string" }, "type": { "type": "string" } } } },
-          "procedures": { "type": "array" }
+          "query": { "type": "string", "description": "Consulta SELECT/CTE sin punto y coma." },
+          "maxRows": { "type": "integer", "minimum": 1, "maximum": 10000, "default": 1000 },
+          "timeoutSeconds": { "type": "integer", "minimum": 1, "default": 30 },
+          "page": { "type": "integer", "minimum": 1, "default": 1 },
+          "pageSize": { "type": "integer", "minimum": 1, "maximum": 10000, "default": 100 }
+        },
+        "required": ["query"],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "result": {
+            "type": "object",
+            "properties": {
+              "columns": { "type": "array", "items": { "type": "string" } },
+              "rows": { "type": "array", "items": { "$ref": "#/definitions/row" } },
+              "rowCount": { "type": "integer", "minimum": 0 },
+              "pagination": { "$ref": "#/definitions/pagination" }
+            },
+            "required": ["columns", "rows", "rowCount", "pagination"]
+          },
+          "columns": { "type": "array", "items": { "type": "string" } },
+          "rows": { "type": "array", "items": { "$ref": "#/definitions/row" } },
+          "pagination": { "$ref": "#/definitions/pagination" }
+        },
+        "required": ["result", "columns", "rows", "pagination"]
+      }
+    },
+    {
+      "name": "execute_stored_procedure",
+      "description": "Ejecuta un procedimiento almacenado con parámetros opcionales.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "procedureName": { "type": "string" },
+          "parameters": {
+            "type": ["object", "null"],
+            "additionalProperties": true,
+            "default": null
+          }
+        },
+        "required": ["procedureName"],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "rows": { "type": "array", "items": { "$ref": "#/definitions/row" } },
+          "structured": { "type": "object" }
+        },
+        "required": ["rows", "structured"]
+      }
+    },
+    {
+      "name": "get_columns",
+      "description": "Devuelve las columnas de una tabla o vista.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "tableOrView": { "type": "string", "description": "Nombre de tabla/vista; puede incluir esquema (dbo.Tabla)." }
+        },
+        "required": ["tableOrView"],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "columns": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": { "type": "string" },
+                "dataType": { "type": "string" },
+                "isNullable": { "type": "boolean" },
+                "maxLength": { "type": ["integer", "null"] }
+              },
+              "required": ["name", "dataType", "isNullable", "maxLength"]
+            }
+          }
+        },
+        "required": ["columns"]
+      }
+    },
+    {
+      "name": "clear_metadata_cache",
+      "description": "Limpia la caché de metadatos del proveedor SQL.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "cleared": { "type": "boolean" }
+        },
+        "required": ["cleared"]
+      }
+    },
+    {
+      "name": "get_metadata_cache_status",
+      "description": "Devuelve las claves y expiraciones de la caché de metadatos.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "key": { "type": "string" },
+            "expiresAt": { "type": "string", "format": "date-time" }
+          },
+          "required": ["key", "expiresAt"]
         }
       }
     },
     {
-      "name": "GetColumns",
-      "description": "Devuelve columnas de una tabla o vista.",
-      "parameters": { "type": "object", "properties": { "objectName": { "type": "string" } }, "required": ["objectName"] },
-      "output": { "type": "object", "properties": { "columns": { "type": "array", "items": { "type": "object", "properties": { "name": { "type": "string" }, "dataType": { "type": "string" }, "isNullable": { "type": "boolean" }, "maxLength": { "type": "integer" } } } } } }
-    },
-    {
-      "name": "ExecuteStoredProcedure",
-      "description": "Ejecuta un procedimiento almacenado con parámetros.",
-      "parameters": { "type": "object", "properties": { "procedureName": { "type": "string" }, "parameters": { "type": "object" } }, "required": ["procedureName"] },
-      "output": { "type": "object", "properties": { "resultSets": { "type": "array" } } }
-    },
-    {
-      "name": "ClearMetadataCache",
-      "description": "Limpia la caché de metadatos.",
-      "parameters": { "type": "object" },
-      "output": { "type": "object" }
-    },
-    {
-      "name": "GetMetadataCacheStatus",
-      "description": "Devuelve estado de la caché de metadatos.",
-      "parameters": { "type": "object" },
-      "output": { "type": "object" }
-    },
-    {
-      "name": "GetAuditEntries",
-      "description": "Devuelve entradas de auditoría en memoria.",
-      "parameters": { "type": "object", "properties": { "since": { "type": "string", "format": "date-time" }, "limit": { "type": "integer" } } },
-      "output": { "type": "object", "properties": { "entries": { "type": "array" } } }
+      "name": "get_audit_entries",
+      "description": "Devuelve las entradas de auditoría en memoria.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "timestamp": { "type": "string", "format": "date-time" },
+            "tool": { "type": "string" },
+            "user": { "type": "string" },
+            "parameters": { "type": ["object", "null"], "additionalProperties": true },
+            "success": { "type": "boolean" },
+            "id": { "type": "string" }
+          },
+          "required": ["timestamp", "tool", "user", "parameters", "success", "id"]
+        }
+      }
     }
   ]
 }

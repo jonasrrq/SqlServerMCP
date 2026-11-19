@@ -9,7 +9,7 @@
     <!-- MCP server packaging (mcpserver template characteristics) -->
     <PackAsTool>true</PackAsTool>
     <PackageType>McpServer</PackageType>
-    <PackageId>Jonas.SqlServerMCP</PackageId>
+    <PackageId>JR.SqlServerMCP</PackageId>
     <PackageVersion>0.1.0-beta</PackageVersion>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageTags>AI; MCP; server; stdio; sqlserver</PackageTags>

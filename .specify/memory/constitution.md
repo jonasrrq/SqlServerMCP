@@ -28,8 +28,8 @@ Sync Impact Report
 
 ### I. Enfoque MCP y contratos estables
 
-SqlServerMCP expone exactamente dos herramientas MCP públicas: `GetMetadata` (metadatos de tablas,
-vistas, procedimientos y relaciones) y `ExecuteQuery` (consultas SQL de solo lectura con paginación).
+SqlServerMCP expone siete herramientas MCP públicas: `get_metadata`, `get_columns`, `execute_query`,
+`execute_stored_procedure`, `clear_metadata_cache`, `get_metadata_cache_status` y `get_audit_entries`.
 Cualquier cambio incompatible en nombre, parámetros o forma de respuesta de estas herramientas REQUIERE:
 (a) incremento de versión semántica MAJOR, (b) documentación de migración en la PR y
 (c) aprobación explícita en revisión. Los parámetros sensibles (credenciales, tokens) NUNCA

@@ -43,7 +43,7 @@ Las versiones se administran de forma central en `Directory.Packages.props`.
 - El **SSE legado fue retirado**: `MCP_ENABLE_LEGACY_SSE` ya no tiene efecto. `MCP_MODE=sse` se acepta como alias de `http`.
 - En `stdio`, todos los logs se escriben en **stderr**; stdout queda reservado para el protocolo.
 - Las tools devuelven un bloque de texto JSON (sin `structuredContent` ni `outputSchema`), porque `UseStructuredContent` sigue desactivado.
-- El paquete NuGet `Jonas.SqlServerMCP` incluye `.mcp/server.json` y declara `--mode stdio` para clientes MCP.
+- El paquete NuGet `JR.SqlServerMCP` incluye `.mcp/server.json` y declara `--mode stdio` para clientes MCP.
 - Native AOT compila, pero `tools/list` no está disponible con `WithToolsFromAssembly`; requiere registro genérico y JSON source-generation antes de soportarlo.
 
 ## Configuración local
@@ -87,7 +87,110 @@ El servidor se empaqueta como MCP server (`PackageType=McpServer`) con manifiest
 dotnet pack SqlServerMCP/SqlServerMCP.csproj -c Release
 ```
 
-El paquete `Jonas.SqlServerMCP` declara `--mode stdio` y los inputs `SQLSERVER_*` para clientes MCP. La publicación en NuGet.org queda como decisión de release.
+El paquete `JR.SqlServerMCP` declara `--mode stdio` y los inputs `SQLSERVER_*` para clientes MCP. La publicación en NuGet.org queda como decisión de release.
+
+## Instalación en clientes MCP
+
+Si el paquete aún no está publicado, usa `dotnet run --project ... -- --mode stdio` o añade `--add-source` con la ruta a `SqlServerMCP\bin\Release` en la configuración de `dnx`.
+
+### Claude Desktop (stdio local)
+
+Edita `%APPDATA%\Claude\claude_desktop_config.json` y añade:
+
+```json
+{
+  "mcpServers": {
+    "SqlServerMCP": {
+      "command": "dnx",
+      "args": [
+        "JR.SqlServerMCP@0.1.0-beta",
+        "--",
+        "--mode", "stdio"
+      ],
+      "env": {
+        "SQLSERVER_CONNECTION_STRING": "Server=localhost;Database=Editoriales_Net;User Id=sa;Password=TU_CLAVE;Encrypt=Mandatory;TrustServerCertificate=True;"
+      }
+    }
+  }
+}
+```
+
+Reinicia Claude Desktop y revisa **Settings → Developer** y los logs en `%APPDATA%\Claude\logs`. No escribas credenciales reales en un archivo versionado.
+
+### Claude Code (stdio local)
+
+```powershell
+claude mcp add --env 'SQLSERVER_CONNECTION_STRING=Server=localhost;Database=Editoriales_Net;User Id=sa;Password=TU_CLAVE;Encrypt=Mandatory;TrustServerCertificate=True;' `
+  --transport stdio SqlServerMCP `
+  -- dnx JR.SqlServerMCP@0.1.0-beta -- --mode stdio
+
+claude mcp list
+```
+
+También puedes declararlo en `.mcp.json` en la raíz del proyecto:
+
+```json
+{
+  "mcpServers": {
+    "SqlServerMCP": {
+      "type": "stdio",
+      "command": "dnx",
+      "args": ["JR.SqlServerMCP@0.1.0-beta", "--", "--mode", "stdio"],
+      "env": {
+        "SQLSERVER_CONNECTION_STRING": "Server=localhost;Database=Editoriales_Net;User Id=sa;Password=TU_CLAVE;Encrypt=Mandatory;TrustServerCertificate=True;"
+      }
+    }
+  }
+}
+```
+
+### ChatGPT desktop (MCP remoto)
+
+ChatGPT **no lanza procesos locales**: sus custom MCP servers son remotos. Ejecuta el servidor en HTTP y expónlo por HTTPS:
+
+```powershell
+$env:MCP_HTTP_AUTH_ENABLED = "true"
+$env:MCP_AUTH_TOKEN = "TU_TOKEN"
+dotnet run --project ./SqlServerMCP/SqlServerMCP.csproj -- --mode http
+```
+
+Expón `http://localhost:5000` con un túnel HTTPS (Cloudflare Tunnel, ngrok u otro). En ChatGPT: **Settings → Plugins → Add custom MCP server**, usa la URL pública y el token (`Authorization: Bearer <token>` o `X-MCP-Auth`). La app de escritorio usa los mismos plugins de tu cuenta.
+
+Limitaciones: ChatGPT no ejecuta stdio local, este servidor no implementa OAuth (solo token estático) y no expone las tools `search`/`fetch`, así que sirve para tool calling de un custom MCP server, no para deep research/company knowledge.
+
+### VS Code, Visual Studio y Cursor
+
+| Cliente | Archivo | Clave |
+|---|---|---|
+| VS Code | `.vscode/mcp.json` | `servers` |
+| Visual Studio 2026 | `.mcp.json` (raíz de la solución) | `servers` |
+| Cursor | `.cursor/mcp.json` | `mcpServers` |
+
+Formato para VS Code / Visual Studio:
+
+```json
+{
+  "servers": {
+    "SqlServerMCP": {
+      "type": "stdio",
+      "command": "dnx",
+      "args": ["JR.SqlServerMCP@0.1.0-beta", "--", "--mode", "stdio"],
+      "env": {
+        "SQLSERVER_CONNECTION_STRING": "Server=localhost;Database=Editoriales_Net;User Id=sa;Password=TU_CLAVE;Encrypt=Mandatory;TrustServerCertificate=True;"
+      }
+    }
+  }
+}
+```
+
+Para Cursor, usa la misma entrada bajo `mcpServers`. Para HTTP, cambia el bloque por:
+
+```json
+{
+  "type": "http",
+  "url": "http://localhost:5000"
+}
+```
 
 ## Ejecución
 
@@ -155,59 +258,44 @@ Usa **Transport Type = Streamable HTTP** con:
 
 El SSE legado ya no está disponible; no uses la ruta `/sse`.
 
-## Integración con VS Code / Cursor (mcp.json)
+## Desarrollo local (sin publicar el paquete)
 
-### Servidor por comando (recomendado para `stdio`)
+Para clientes que lanzan procesos locales, puedes usar `dotnet run` en lugar de `dnx`:
 
 ```jsonc
 {
   "servers": {
     "SqlServerMCP": {
+      "type": "stdio",
       "command": "dotnet",
       "args": [
         "run",
         "--project",
-        "./SqlServerMCP/SqlServerMCP.csproj",
+        "D:\\Desarrollo\\SqlServerMCP\\SqlServerMCP\\SqlServerMCP.csproj",
         "--",
-        "--mode", "stdio",
-        "--server", "localhost",
-        "--database", "Northwind",
-        "--user", "sa"
+        "--mode", "stdio"
       ],
       "env": {
-        "SQLSERVER_PASSWORD": "tu_clave"
+        "SQLSERVER_CONNECTION_STRING": "Server=localhost;Database=Editoriales_Net;User Id=sa;Password=TU_CLAVE;Encrypt=Mandatory;TrustServerCertificate=True;"
       }
     }
   }
 }
 ```
 
-### Servidor por URL (modo HTTP)
+Para HTTP local:
 
-Si tienes el servidor levantado en HTTP, registra la URL base MCP:
-
-```jsonc
-{
-  "servers": {
-    "SqlServerMCP": {
-      "url": "http://localhost:5000",
-      "type": "http"
-    }
-  }
-}
+```powershell
+dotnet run --project ./SqlServerMCP/SqlServerMCP.csproj -- --mode http
 ```
 
-Con auth opcional habilitada en HTTP:
-
 ```jsonc
 {
   "servers": {
     "SqlServerMCP": {
-      "url": "http://localhost:5000",
       "type": "http",
-      "headers": {
-        "X-MCP-Auth": "mi_token_local"
-      }
+      "url": "http://localhost:5000",
+      "headers": { "X-MCP-Auth": "mi_token_local" }
     }
   }
 }
@@ -215,122 +303,88 @@ Con auth opcional habilitada en HTTP:
 
 ## Herramientas MCP expuestas
 
-Desde `MetadataTool`:
+Los nombres MCP son snake_case; entre paréntesis, el método C#:
 
-- `GetMetadata`: tablas, vistas, procedimientos y llaves foráneas.
-- `GetColumns`: columnas de tabla/vista.
-- `ExecuteQuery`: ejecución de consulta SQL de solo lectura.
-- `ExecuteStoredProcedure`: ejecución de SP con parámetros.
-- `ClearMetadataCache`: limpia la caché de metadatos.
-- `GetMetadataCacheStatus`: devuelve claves/expiración de la caché.
-- `GetAuditEntries`: devuelve auditoría en memoria para depuración.
+- `get_metadata` (`GetMetadata`): tablas, vistas, procedimientos y FKs.
+- `get_columns` (`GetColumns`): columnas de tabla/vista.
+- `execute_query` (`ExecuteQuery`): SELECT/CTE con `maxRows`, `timeoutSeconds`, `page` y `pageSize`.
+- `execute_stored_procedure` (`ExecuteStoredProcedure`): SP con parámetros.
+- `clear_metadata_cache` (`ClearMetadataCache`): limpia la caché.
+- `get_metadata_cache_status` (`GetMetadataCacheStatus`): claves/expiración.
+- `get_audit_entries` (`GetAuditEntries`): auditoría en memoria.
 
 ## Uso desde cliente
 
-Recomendado: usa el SDK oficial (TypeScript o Python) o el MCP Inspector. El servidor expone transporte Streamable HTTP en la URL base (por defecto `http://localhost:5000`).
+Recomendado: usa el SDK oficial de MCP o el MCP Inspector. El servidor expone Streamable HTTP en la URL base (por defecto `http://localhost:5000`).
 
-- Autenticación HTTP (opcional): envía el token configurado en `MCP_AUTH_TOKEN` como `Authorization: Bearer <token>` o en el header `X-MCP-Auth` (configurable con `MCP_AUTH_HEADER_NAME`).
-- Endpoints importantes:
-  - Streamable HTTP: POST `http://localhost:5000/` (transport layer manejado por el SDK/inspector).
+- Autenticación HTTP opcional: `Authorization: Bearer <token>` o `X-MCP-Auth: <token>`.
+- Endpoint Streamable HTTP: `POST http://localhost:5000/`.
+- Las tools se llaman por su nombre MCP (`execute_query`, `get_metadata`, etc.), no por el método C#.
 
-Ejemplo rápido (usar SDK cuando sea posible):
+Ejemplo de llamada JSON-RPC (lo que hace un cliente MCP por debajo):
 
-Node (recomendado con SDK):
-
-```js
-// pseudocódigo — usa el SDK oficial en lugar de peticiones manuales cuando sea posible
-import { McpClient } from '@modelcontextprotocol/client';
-const client = new McpClient('http://localhost:5000', { headers: { 'X-MCP-Auth': process.env.MCP_AUTH_TOKEN } });
-const res = await client.callTool('ExecuteQuery', { query: 'SELECT TOP 10 * FROM sys.tables' });
-console.log(res);
-```
-
-Python (cuando no exista SDK preferido):
-
-```py
-import requests
-url = 'http://localhost:5000/'
-headers = {'Content-Type': 'application/json', 'X-MCP-Auth': 'mi_token_local'}
-payload = {
-  # el SDK construye mensajes conforme a la especificación MCP; aquí usamos un ejemplo genérico
-  'tool': 'ExecuteQuery',
-  'parameters': { 'query': 'SELECT TOP 10 * FROM sys.tables' }
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "tools/call",
+  "params": {
+    "name": "execute_query",
+    "arguments": {
+      "query": "SELECT TOP 10 name FROM sys.tables ORDER BY name",
+      "maxRows": 10,
+      "page": 1,
+      "pageSize": 10
+    }
+  }
 }
-resp = requests.post(url, json=payload, headers=headers, timeout=30)
-print(resp.status_code, resp.text)
 ```
+
+No envíes `{ "tool": "...", "parameters": {...} }`: eso no es MCP. Para HTTP manual usa JSON-RPC con `Accept: application/json, text/event-stream`; para todo lo demás, un SDK o el Inspector.
 
 Notas prácticas:
-- Preferir siempre el SDK oficial o el MCP Inspector: manejan negociación, streaming y reproducibilidad de transportes (stdio vs http).
-- Para peticiones ad-hoc use `POST /` con el header de autenticación si está habilitado.
-- Respeto de límites: el servidor aplica `MCP_QUERY_MAX_ROWS` y `MCP_QUERY_TIMEOUT_SECONDS`.
-- Paginación: cuando use `ExecuteQuery` en grandes conjuntos use parámetros `page`/`pageSize` si su cliente/SDK los expone.
-
-Si necesitas ejemplos concretos para un cliente (Node/Python/Rust), indícamelo y genero snippets listos para copiar.
-
-## Publicar y compartir el skill
-
-Hemos añadido las herramientas necesarias para generar un paquete de distribución del skill `SqlServerMCP`:
-
-- `./.agents/skills/SqlServerMCP/SKILL.md` — el contenido a distribuir (licencia MIT).
-- `make-release.ps1` — script PowerShell para copiar y crear un ZIP listo para distribuir.
-
-Para crear el paquete de release desde la raíz del repo:
-
-```powershell
-.\make-release.ps1
-```
-
-El ZIP resultante quedará en `./dist/SqlServerMCP-skill.zip`.
-
-¿Quieres que además publique automáticamente el skill en un repo Git (crear branch + commit + tag)? Si es así dime el remote y el branch destino.
+- Límites: `MCP_QUERY_MAX_ROWS` y `MCP_QUERY_TIMEOUT_SECONDS`.
+- Paginación: usa `page`/`pageSize` en `execute_query`.
+- Errores: la tool devuelve `error: true`, `errorCode` y `message`; no reintentes a ciegas.
 
 ## Skill para agentes (machine-readable)
 
-Además del `SKILL.md`, el skill ahora incluye un descriptor machine-readable con las herramientas y sus esquemas en JSON:
+El skill incluye el contrato real de las tools:
 
-- `./.agents/skills/SqlServerMCP/tools.json` — lista de herramientas, parámetros y esquema de salida (JSON Schema). Esto facilita que agentes (Copilot u otros) descubran y validen parámetros automáticamente.
+- `.agents/skills/SqlServerMCP/SKILL.md` — instrucciones, reglas de seguridad y contrato de salida.
+- `.agents/skills/SqlServerMCP/tools.json` — nombres MCP, argumentos y esquemas JSON.
 
-Los consumidores automáticos pueden usar `tools.json` para generar formularios, validadores o helpers de invocación en clientes.
-
-Ejemplo rápido (validar payload en Node con Ajv):
+Validación de argumentos con Ajv:
 
 ```js
 import Ajv from 'ajv';
 import tools from './.agents/skills/SqlServerMCP/tools.json';
 
 const ajv = new Ajv();
-const schema = tools.tools.find(t => t.name === 'ExecuteQuery').parameters;
+const schema = tools.tools.find(t => t.name === 'execute_query').inputSchema;
 const validate = ajv.compile(schema);
-const payload = { query: 'SELECT TOP 1 * FROM sys.tables' };
-console.log(validate(payload));
+console.log(validate({ query: 'SELECT TOP 1 name FROM sys.tables', maxRows: 1 }));
 ```
 
-## Distribución del skill `SqlServerMCP`
+## Distribución del skill
 
-Incluimos un skill cliente en `.agents/skills/SqlServerMCP/SKILL.md` dentro de este repositorio. Este skill contiene ejemplos listos para usar, recomendaciones de seguridad y un "cheatsheet" de herramientas expuestas.
-
-Para usarlo localmente o distribuirlo:
-
-- Incluye la carpeta `.agents/skills/SqlServerMCP` en tu paquete/repo. El archivo principal es `SKILL.md` con licencia MIT.
-- Opcional: publica el directorio como un paquete (por ejemplo, npm o un repositorio Git) para que tus equipos puedan instalarlo/consultarlo.
-
-Ejemplo de comandos para preparar la distribución (opcional):
+El skill vive en `.agents/skills/SqlServerMCP` y se distribuye como ZIP:
 
 ```powershell
-# copia el skill al folder de release
-mkdir -Force .\dist\skills
-robocopy .\.agents\skills\SqlServerMCP .\dist\skills\SqlServerMCP /E
-
-# empaqueta el release (zip)
-powershell -Command "Compress-Archive -Path .\dist\skills\SqlServerMCP -DestinationPath .\dist\SqlServerMCP-skill.zip -Force"
+.\make-release.ps1
 ```
 
-Si quieres, creo un script `make-release.ps1` que automatice la copia y el zip, y actualizo el README con instrucciones paso a paso para publicar el skill.
+El script valida el frontmatter de `SKILL.md` y que `tools.json` sea JSON válido, copia el skill a `dist\skills\SqlServerMCP` y genera `dist\SqlServerMCP-skill.zip`.
+
+Contenido del ZIP:
+- `SKILL.md` — instrucciones para el agente.
+- `tools.json` — contrato machine-readable de las tools.
+
+Para instalarlo en otro agente, copia `skills/SqlServerMCP` en la ruta de skills del cliente o publica el ZIP en tu repositorio de distribución.
 
 ## Seguridad y límites implementados
 
-- `ExecuteQuery` solo permite `SELECT` / `WITH`
+- `execute_query` solo permite `SELECT` / `WITH`
 - se bloquean consultas peligrosas y múltiples sentencias
 - límite configurable de filas y timeout:
   - `MCP_QUERY_MAX_ROWS`

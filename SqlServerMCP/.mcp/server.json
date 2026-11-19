@@ -7,7 +7,7 @@
     {
       "registryType": "nuget",
       "registryBaseUrl": "https://api.nuget.org",
-      "identifier": "Jonas.SqlServerMCP",
+      "identifier": "JR.SqlServerMCP",
       "version": "0.1.0-beta",
       "transport": {
         "type": "stdio"
