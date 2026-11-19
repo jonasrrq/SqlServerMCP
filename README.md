@@ -1,10 +1,11 @@
-# MCP Server on .NET 11 for SQL Server
+# Database MCP Server on .NET 11 (SQL Server engine)
 
-Servidor MCP en C# que expone herramientas para consultar metadatos y ejecutar consultas en SQL Server.
+Servidor MCP en C# para consultar metadatos y ejecutar consultas. Hoy implementa SQL Server; el paquete `JR.DatabaseMCP` usa un nombre genérico para incorporar otros motores más adelante.
 
 ## Estado actual del proyecto
 
 - **Framework**: `net11.0`
+- **Motor actual**: SQL Server
 - **Gestión de paquetes**: centralizada con `Directory.Packages.props`
 - **Transporte MCP**:
   - `stdio` (integración local con editores/agentes)
@@ -43,7 +44,7 @@ Las versiones se administran de forma central en `Directory.Packages.props`.
 - El **SSE legado fue retirado**: `MCP_ENABLE_LEGACY_SSE` ya no tiene efecto. `MCP_MODE=sse` se acepta como alias de `http`.
 - En `stdio`, todos los logs se escriben en **stderr**; stdout queda reservado para el protocolo.
 - Las tools devuelven un bloque de texto JSON (sin `structuredContent` ni `outputSchema`), porque `UseStructuredContent` sigue desactivado.
-- El paquete NuGet `JR.SqlServerMCP` incluye `.mcp/server.json` y declara `--mode stdio` para clientes MCP.
+- El paquete NuGet `JR.DatabaseMCP` incluye `.mcp/server.json` y declara `--mode stdio` para clientes MCP.
 - Native AOT compila, pero `tools/list` no está disponible con `WithToolsFromAssembly`; requiere registro genérico y JSON source-generation antes de soportarlo.
 
 ## Configuración local
@@ -87,7 +88,7 @@ El servidor se empaqueta como MCP server (`PackageType=McpServer`) con manifiest
 dotnet pack SqlServerMCP/SqlServerMCP.csproj -c Release
 ```
 
-El paquete `JR.SqlServerMCP` declara `--mode stdio` y los inputs `SQLSERVER_*` para clientes MCP. La publicación en NuGet.org queda como decisión de release.
+El paquete `JR.DatabaseMCP` declara `--mode stdio` y los inputs `SQLSERVER_*` para clientes MCP. El nombre es genérico para futuros motores; el binario actual implementa SQL Server. La publicación en NuGet.org queda como decisión de release.
 
 ## Instalación en clientes MCP
 
@@ -103,7 +104,7 @@ Edita `%APPDATA%\Claude\claude_desktop_config.json` y añade:
     "SqlServerMCP": {
       "command": "dnx",
       "args": [
-        "JR.SqlServerMCP@0.1.0-beta",
+        "JR.DatabaseMCP@0.1.0-beta",
         "--",
         "--mode", "stdio"
       ],
@@ -122,7 +123,7 @@ Reinicia Claude Desktop y revisa **Settings → Developer** y los logs en `%APPD
 ```powershell
 claude mcp add --env 'SQLSERVER_CONNECTION_STRING=Server=localhost;Database=Editoriales_Net;User Id=sa;Password=TU_CLAVE;Encrypt=Mandatory;TrustServerCertificate=True;' `
   --transport stdio SqlServerMCP `
-  -- dnx JR.SqlServerMCP@0.1.0-beta -- --mode stdio
+  -- dnx JR.DatabaseMCP@0.1.0-beta -- --mode stdio
 
 claude mcp list
 ```
@@ -135,7 +136,7 @@ También puedes declararlo en `.mcp.json` en la raíz del proyecto:
     "SqlServerMCP": {
       "type": "stdio",
       "command": "dnx",
-      "args": ["JR.SqlServerMCP@0.1.0-beta", "--", "--mode", "stdio"],
+      "args": ["JR.DatabaseMCP@0.1.0-beta", "--", "--mode", "stdio"],
       "env": {
         "SQLSERVER_CONNECTION_STRING": "Server=localhost;Database=Editoriales_Net;User Id=sa;Password=TU_CLAVE;Encrypt=Mandatory;TrustServerCertificate=True;"
       }
@@ -174,7 +175,7 @@ Formato para VS Code / Visual Studio:
     "SqlServerMCP": {
       "type": "stdio",
       "command": "dnx",
-      "args": ["JR.SqlServerMCP@0.1.0-beta", "--", "--mode", "stdio"],
+      "args": ["JR.DatabaseMCP@0.1.0-beta", "--", "--mode", "stdio"],
       "env": {
         "SQLSERVER_CONNECTION_STRING": "Server=localhost;Database=Editoriales_Net;User Id=sa;Password=TU_CLAVE;Encrypt=Mandatory;TrustServerCertificate=True;"
       }
